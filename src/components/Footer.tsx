@@ -48,27 +48,27 @@ export const Footer: React.FC = () => {
               <li>
                 <Link to="/portfolio/marina-sdr" className="hover:text-cyan-400 transition-colors flex items-center gap-1.5">
                   <span>Marina — SDR com IA</span>
-                  <span className="text-[10px] px-1.5 py-0.2 bg-cyan-950 text-cyan-400 rounded border border-cyan-800/50">Core</span>
+                  <span className="text-[10px] px-1.5 py-0.2 bg-cyan-950 text-cyan-400 rounded border border-cyan-800/50">Flagship</span>
                 </Link>
               </li>
               <li>
-                <Link to="/portfolio/antum-flow" className="hover:text-cyan-400 transition-colors">
-                  Antum Flow (Automações)
+                <Link to="/portfolio/harmony" className="hover:text-cyan-400 transition-colors">
+                  Harmony (CRM Proteção Veicular)
                 </Link>
               </li>
               <li>
-                <Link to="/portfolio/nexus-rpa" className="hover:text-cyan-400 transition-colors">
-                  Nexus RPA (Sistemas Legados)
+                <Link to="/portfolio/nefi" className="hover:text-cyan-400 transition-colors">
+                  Néfi (RPA & Sistemas Legados)
                 </Link>
               </li>
               <li>
-                <Link to="/portfolio/sync-bridge" className="hover:text-cyan-400 transition-colors">
-                  SyncBridge (Conexões CRM/ERP)
+                <Link to="/portfolio/kate" className="hover:text-cyan-400 transition-colors">
+                  Kate (Assistente Jurídico IA)
                 </Link>
               </li>
               <li>
-                <Link to="/portfolio/pulse-ops" className="hover:text-cyan-400 transition-colors">
-                  PulseOps (Documentos & Backoffice)
+                <Link to="/portfolio/bia" className="hover:text-cyan-400 transition-colors">
+                  Bia (Gestão de Salão & Barbearia)
                 </Link>
               </li>
             </ul>

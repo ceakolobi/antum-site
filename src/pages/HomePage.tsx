@@ -59,7 +59,7 @@ export const HomePage: React.FC = () => {
       desc: 'Processos repetitivos transformados em fluxos automáticos.',
       icon: Workflow,
       color: 'from-indigo-500 to-violet-600',
-      link: '/portfolio/antum-flow',
+      link: '/portfolio/nefi',
       tag: 'Zero Falhas',
     },
     {
@@ -67,7 +67,7 @@ export const HomePage: React.FC = () => {
       desc: 'Robôs para executar tarefas em sistemas e aplicações.',
       icon: Cpu,
       color: 'from-violet-500 to-purple-600',
-      link: '/portfolio/nexus-rpa',
+      link: '/portfolio/nefi',
       tag: 'Sistemas Legados',
     },
     {
@@ -75,7 +75,7 @@ export const HomePage: React.FC = () => {
       desc: 'Produtos digitais e plataformas desenvolvidas sob medida.',
       icon: Layers,
       color: 'from-cyan-600 to-teal-600',
-      link: '/portfolio/custom-saas',
+      link: '/portfolio/antum-custom',
       tag: 'Software Proprietário',
     },
     {
@@ -83,7 +83,7 @@ export const HomePage: React.FC = () => {
       desc: 'Conectamos IA aos sistemas que sua empresa já utiliza.',
       icon: Network,
       color: 'from-teal-500 to-emerald-600',
-      link: '/portfolio/sync-bridge',
+      link: '/portfolio/harmony',
       tag: 'CRMs, ERPs & APIs',
     },
   ];

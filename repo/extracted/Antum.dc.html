@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="icon" type="image/png" href="./assets/favicon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script src="./image-slot.js"></script>
+  <style>
+    body { margin: 0; }
+    @media (max-width: 720px) {
+      .antum-nav-links { display: none !important; }
+      .antum-hero-grid { grid-template-columns: 1fr !important; }
+    }
+  </style>
+</helmet>
+<div style="font-family:'Inter',sans-serif; background:{{ bg }}; color:{{ textPrimary }}; min-height:100vh; transition:background .2s,color .2s;">
+
+  <header style="position:sticky; top:0; z-index:20; display:flex; align-items:center; justify-content:space-between; padding:16px 24px; background:{{ headerBg }}; backdrop-filter:blur(10px); border-bottom:1px solid {{ border }}; gap:12px; flex-wrap:wrap;">
+<img src="./assets/antum-logo-colorido.png" alt="Antum" style="height:48px; width:auto; display:{{ logoColoridoDisplay }};" />
+    <img src="./assets/antum-logo-branco.png" alt="Antum" style="height:48px; width:auto; display:{{ logoBrancoDisplay }};" />
+    <nav class="antum-nav-links" style="display:flex; align-items:center; gap:28px; font-size:14px; font-weight:500; color:{{ textSecondary }};">
+      <a href="#home" style="color:inherit; text-decoration:none;">{{ t.nav_home }}</a>
+      <a href="#sobre" style="color:inherit; text-decoration:none;">{{ t.nav_sobre }}</a>
+      <a href="#projetos" style="color:inherit; text-decoration:none;">{{ t.nav_projetos }}</a>
+      <a href="#portfolio" style="color:inherit; text-decoration:none;">{{ t.nav_portfolio }}</a>
+      <a href="#planos" style="color:inherit; text-decoration:none;">{{ t.nav_planos }}</a>
+      <a href="#contato" style="color:inherit; text-decoration:none;">{{ t.nav_contato }}</a>
+    </nav>
+    <div style="display:flex; align-items:center; gap:10px;">
+      <select value="{{ lang }}" onChange="{{ onLangChange }}" style="border-radius:10px; border:1px solid {{ border }}; background:{{ cardBg }}; color:{{ textPrimary }}; font-size:13px; font-weight:600; padding:8px 10px; cursor:pointer;">
+        <sc-for list="{{ langs }}" as="l" hint-placeholder-count="5">
+          <option value="{{ l.code }}">{{ l.label }}</option>
+        </sc-for>
+      </select>
+      <button onClick="{{ toggleTheme }}" style="width:36px; height:36px; border-radius:50%; border:1px solid {{ border }}; background:{{ cardBg }}; color:{{ textPrimary }}; cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center;">{{ themeIcon }}</button>
+      <a href="#contato" style="background:{{ accentGradient }}; color:#fff; font-weight:600; font-size:14px; padding:10px 18px; border-radius:10px; text-decoration:none;">{{ t.header_cta }}</a>
+    </div>
+  </header>
+
+  <section id="home" style="padding:72px 24px 56px; max-width:1080px; margin:0 auto;">
+    <div style="max-width:640px;">
+      <div style="display:inline-block; font-size:13px; font-weight:600; color:{{ accentSolid }}; background:{{ pillBg }}; padding:6px 14px; border-radius:999px; margin-bottom:20px;">{{ t.hero_pill }}</div>
+      <h1 style="font-family:'Poppins',sans-serif; font-size:clamp(32px,5.5vw,52px); font-weight:800; line-height:1.1; letter-spacing:-0.02em; margin:0 0 20px;">{{ t.hero_title }}</h1>
+      <p style="font-size:18px; line-height:1.6; color:{{ textSecondary }}; margin:0 0 32px;">{{ t.hero_desc }}</p>
+      <div style="display:flex; flex-wrap:wrap; gap:14px;">
+        <a href="#projetos" style="background:{{ accentGradient }}; color:#fff; font-weight:600; font-size:16px; padding:14px 26px; border-radius:12px; text-decoration:none;">{{ t.hero_cta1 }}</a>
+        <a href="#contato" style="background:{{ cardBg }}; border:1px solid {{ border }}; color:{{ textPrimary }}; font-weight:600; font-size:16px; padding:14px 26px; border-radius:12px; text-decoration:none;">{{ t.hero_cta2 }}</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="sobre" style="padding:48px 24px 64px; max-width:1080px; margin:0 auto; border-top:1px solid {{ border }};">
+    <h2 style="font-family:'Poppins',sans-serif; font-size:28px; font-weight:700; margin:0 0 16px;">{{ t.sobre_title }}</h2>
+    <p style="font-size:16px; line-height:1.7; color:{{ textSecondary }}; max-width:680px; margin:0;">{{ t.sobre_text }}</p>
+  </section>
+
+  <section id="projetos" style="padding:48px 24px 64px; max-width:1080px; margin:0 auto; border-top:1px solid {{ border }};">
+    <h2 style="font-family:'Poppins',sans-serif; font-size:28px; font-weight:700; margin:0 0 8px;">{{ t.projetos_title }}</h2>
+    <p style="font-size:15px; color:{{ textSecondary }}; margin:0 0 32px;">{{ t.projetos_subtitle }}</p>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:24px;">
+      <sc-for list="{{ projects }}" as="p" hint-placeholder-count="3">
+        <div style="background:{{ cardBg }}; border:1px solid {{ border }}; border-radius:16px; overflow:hidden; display:flex; flex-direction:column;">
+          <image-slot id="{{ p.slotId }}" shape="rect" style="width:100%; height:170px;" placeholder="{{ p.placeholder }}"></image-slot>
+          <div style="padding:22px; display:flex; flex-direction:column; gap:10px; flex:1;">
+            <div style="font-size:12px; font-weight:600; color:{{ accentSolid }}; text-transform:uppercase; letter-spacing:.04em;">{{ p.tag }}</div>
+            <h3 style="font-family:'Poppins',sans-serif; font-size:19px; font-weight:700; margin:0;">{{ p.name }}</h3>
+            <p style="font-size:14px; line-height:1.6; color:{{ textSecondary }}; margin:0; flex:1;">{{ p.description }}</p>
+            <a href="{{ p.href }}" style="margin-top:8px; align-self:flex-start; background:{{ accentGradient }}; color:#fff; font-weight:600; font-size:14px; padding:10px 18px; border-radius:10px; text-decoration:none;">{{ p.cta }}</a>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section id="portfolio" style="padding:48px 24px 64px; max-width:1080px; margin:0 auto; border-top:1px solid {{ border }};">
+    <h2 style="font-family:'Poppins',sans-serif; font-size:28px; font-weight:700; margin:0 0 8px;">{{ t.portfolio_title }}</h2>
+    <p style="font-size:15px; color:{{ textSecondary }}; margin:0 0 32px;">{{ t.portfolio_subtitle }}</p>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px;">
+      <image-slot id="shot1" shape="rounded" radius="14" style="width:100%; height:180px;" placeholder="{{ t.portfolio_placeholder }}"></image-slot>
+      <image-slot id="shot2" shape="rounded" radius="14" style="width:100%; height:180px;" placeholder="{{ t.portfolio_placeholder }}"></image-slot>
+      <image-slot id="shot3" shape="rounded" radius="14" style="width:100%; height:180px;" placeholder="{{ t.portfolio_placeholder }}"></image-slot>
+      <image-slot id="shot4" shape="rounded" radius="14" style="width:100%; height:180px;" placeholder="{{ t.portfolio_placeholder }}"></image-slot>
+    </div>
+  </section>
+
+  <section id="planos" style="padding:48px 24px 64px; max-width:1080px; margin:0 auto; border-top:1px solid {{ border }};">
+    <h2 style="font-family:'Poppins',sans-serif; font-size:28px; font-weight:700; margin:0 0 8px;">{{ t.planos_title }}</h2>
+    <p style="font-size:15px; color:{{ textSecondary }}; margin:0 0 32px;">{{ t.planos_subtitle }}</p>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:20px;">
+      <sc-for list="{{ planCards }}" as="c" hint-placeholder-count="3">
+        <div style="{{ c.cardStyle }}">
+          <sc-if value="{{ c.badge }}"><div style="position:absolute; top:-12px; right:24px; background:{{ accentGradient }}; color:#fff; font-size:11px; font-weight:700; padding:4px 12px; border-radius:999px;">{{ c.badge }}</div></sc-if>
+          <div style="font-size:13px; font-weight:600; color:{{ textSecondary }}; text-transform:uppercase;">{{ c.tag }}</div>
+          <div style="font-family:'Poppins',sans-serif; font-size:26px; font-weight:800;">{{ c.price }}</div>
+          <p style="font-size:14px; color:{{ textSecondary }}; line-height:1.6; margin:0; flex:1;">{{ c.desc }}</p>
+          <a href="{{ c.href }}" style="{{ c.btnStyle }}">{{ c.cta }}</a>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section id="contato" style="padding:56px 24px 72px; max-width:1080px; margin:0 auto; border-top:1px solid {{ border }};">
+    <div style="background:{{ accentGradient }}; border-radius:20px; padding:48px 32px; text-align:center;">
+      <h2 style="font-family:'Poppins',sans-serif; font-size:26px; font-weight:800; color:#fff; margin:0 0 12px;">{{ t.contato_title }}</h2>
+      <p style="font-size:15px; color:rgba(255,255,255,.9); margin:0 0 24px;">contato@antum.com.br</p>
+      <a href="mailto:contato@antum.com.br" style="background:#fff; color:{{ accentSolid }}; font-weight:700; font-size:15px; padding:14px 28px; border-radius:10px; text-decoration:none; display:inline-block;">{{ t.contato_cta }}</a>
+    </div>
+  </section>
+
+  <footer style="padding:32px 24px; max-width:1080px; margin:0 auto; display:flex; flex-wrap:wrap; gap:16px; align-items:center; justify-content:space-between; border-top:1px solid {{ border }};">
+    <img src="./assets/antum-logo-colorido.png" alt="Antum" style="height:28px; width:auto; display:{{ logoColoridoDisplay }};" />
+    <img src="./assets/antum-logo-branco.png" alt="Antum" style="height:28px; width:auto; display:{{ logoBrancoDisplay }};" />
+    <div style="display:flex; gap:20px; font-size:13px; color:{{ textSecondary }};">
+      <a href="mailto:contato@antum.com.br" style="color:inherit; text-decoration:none;">contato@antum.com.br</a>
+      <a href="#" style="color:inherit; text-decoration:none;">{{ t.footer_termos }}</a>
+      <a href="#" style="color:inherit; text-decoration:none;">{{ t.footer_privacidade }}</a>
+    </div>
+  </footer>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {}, &quot;defaultTheme&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;light&quot;, &quot;options&quot;: [&quot;dark&quot;, &quot;light&quot;], &quot;tsType&quot;: &quot;string&quot;}, &quot;defaultLang&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;pt-BR&quot;, &quot;options&quot;: [&quot;pt-BR&quot;, &quot;pt-PT&quot;, &quot;en&quot;, &quot;es&quot;, &quot;fr&quot;], &quot;tsType&quot;: &quot;string&quot;}}">
+const LANGS = [
+  { code: 'pt-BR', label: 'PT-BR' },
+  { code: 'pt-PT', label: 'PT-PT' },
+  { code: 'en', label: 'EN' },
+  { code: 'es', label: 'ES' },
+  { code: 'fr', label: 'FR' },
+];
+
+const DICT = {
+  'pt-BR': {
+    nav_home: 'Home', nav_sobre: 'Sobre', nav_projetos: 'Projetos', nav_portfolio: 'Portfólio', nav_planos: 'Planos e Preços', nav_contato: 'Contato',
+    header_cta: 'Falar comigo',
+    hero_pill: 'Estúdio de software independente',
+    hero_title: 'Sistemas prontos pra fazer seu negócio rodar sozinho',
+    hero_desc: 'Sou desenvolvedor independente e crio produtos digitais completos — de atendentes de IA a sistemas de gestão — prontos pra usar ou adaptar pro seu negócio.',
+    hero_cta1: 'Ver projetos', hero_cta2: 'Falar comigo',
+    sobre_title: 'Sobre',
+    sobre_text: 'Construo produtos digitais focados em resolver problemas reais de pequenos negócios: atendimento, organização e gestão. Cada projeto abaixo nasceu de uma necessidade concreta e está disponível pra você adquirir ou testar.',
+    projetos_title: 'Projetos', projetos_subtitle: 'Produtos prontos, disponíveis agora.',
+    portfolio_title: 'Portfólio', portfolio_subtitle: 'Telas e interfaces em uso.', portfolio_placeholder: 'Tela do produto',
+    planos_title: 'Planos e Preços', planos_subtitle: 'Pra quem quer um sistema sob medida.',
+    plan1_tag: 'Consultoria', plan1_price: 'Sob consulta', plan1_desc: 'Diagnóstico e recomendação de sistema pro seu negócio.', plan1_cta: 'Conversar',
+    plan2_tag: 'Produto pronto', plan2_price: 'A partir de R$29,90/mês', plan2_desc: 'Adquira um dos produtos prontos, como a Marina SDR, e comece a usar em minutos.', plan2_cta: 'Ver projetos', plan2_badge: 'Mais popular',
+    plan3_tag: 'Sob medida', plan3_price: 'Projeto customizado', plan3_desc: 'Sistema exclusivo, do zero, pro seu caso específico.', plan3_cta: 'Solicitar orçamento',
+    contato_title: 'Vamos conversar sobre o seu projeto?', contato_cta: 'Enviar e-mail',
+    footer_termos: 'Termos', footer_privacidade: 'Privacidade',
+    proj_marina_tag: 'WhatsApp · IA', proj_marina_desc: 'Atendente de IA no WhatsApp que responde, tira dúvidas e qualifica clientes 24h.', proj_marina_cta: 'Ver projeto',
+    proj_alma_tag: 'Proteção veicular', proj_alma_desc: 'Sistema completo pra associações de proteção veicular venderem 100% online.', proj_alma_cta: 'Ver projeto',
+    proj_kate_tag: 'Jurídico · IA', proj_kate_desc: 'Assistente de IA para escritórios de advocacia organizarem prazos e atendimento.', proj_kate_cta: 'Em breve',
+    proj_nefi_tag: 'Gestão', proj_nefi_desc: 'Sistema de gestão acadêmica para escolas administrarem turmas e alunos.', proj_nefi_cta: 'Em breve',
+  },
+  'pt-PT': {
+    nav_home: 'Início', nav_sobre: 'Sobre', nav_projetos: 'Projetos', nav_portfolio: 'Portefólio', nav_planos: 'Planos e Preços', nav_contato: 'Contacto',
+    header_cta: 'Fale comigo',
+    hero_pill: 'Estúdio de software independente',
+    hero_title: 'Sistemas prontos para o seu negócio funcionar sozinho',
+    hero_desc: 'Sou programador independente e crio produtos digitais completos — de atendentes de IA a sistemas de gestão — prontos a usar ou adaptar ao seu negócio.',
+    hero_cta1: 'Ver projetos', hero_cta2: 'Fale comigo',
+    sobre_title: 'Sobre',
+    sobre_text: 'Construo produtos digitais focados em resolver problemas reais de pequenos negócios: atendimento, organização e gestão. Cada projeto abaixo nasceu de uma necessidade concreta e está disponível para adquirir ou testar.',
+    projetos_title: 'Projetos', projetos_subtitle: 'Produtos prontos, disponíveis agora.',
+    portfolio_title: 'Portefólio', portfolio_subtitle: 'Ecrãs e interfaces em utilização.', portfolio_placeholder: 'Ecrã do produto',
+    planos_title: 'Planos e Preços', planos_subtitle: 'Para quem quer um sistema à medida.',
+    plan1_tag: 'Consultoria', plan1_price: 'Sob consulta', plan1_desc: 'Diagnóstico e recomendação de sistema para o seu negócio.', plan1_cta: 'Falar',
+    plan2_tag: 'Produto pronto', plan2_price: 'A partir de 29,90€/mês', plan2_desc: 'Adquira um dos produtos prontos, como a Marina SDR, e comece a usar em minutos.', plan2_cta: 'Ver projetos', plan2_badge: 'Mais popular',
+    plan3_tag: 'À medida', plan3_price: 'Projeto personalizado', plan3_desc: 'Sistema exclusivo, de raiz, para o seu caso específico.', plan3_cta: 'Pedir orçamento',
+    contato_title: 'Vamos falar sobre o seu projeto?', contato_cta: 'Enviar e-mail',
+    footer_termos: 'Termos', footer_privacidade: 'Privacidade',
+    proj_marina_tag: 'WhatsApp · IA', proj_marina_desc: 'Atendente de IA no WhatsApp que responde, esclarece dúvidas e qualifica clientes 24h.', proj_marina_cta: 'Ver projeto',
+    proj_alma_tag: 'Proteção automóvel', proj_alma_desc: 'Sistema completo para associações de proteção automóvel venderem 100% online.', proj_alma_cta: 'Ver projeto',
+    proj_kate_tag: 'Jurídico · IA', proj_kate_desc: 'Assistente de IA para escritórios de advocacia organizarem prazos e atendimento.', proj_kate_cta: 'Brevemente',
+    proj_nefi_tag: 'Gestão', proj_nefi_desc: 'Sistema de gestão académica para escolas administrarem turmas e alunos.', proj_nefi_cta: 'Brevemente',
+  },
+  en: {
+    nav_home: 'Home', nav_sobre: 'About', nav_projetos: 'Projects', nav_portfolio: 'Portfolio', nav_planos: 'Plans & Pricing', nav_contato: 'Contact',
+    header_cta: 'Talk to me',
+    hero_pill: 'Independent software studio',
+    hero_title: 'Ready-made systems to run your business on its own',
+    hero_desc: "I'm an independent developer building complete digital products — from AI assistants to management systems — ready to use or adapt to your business.",
+    hero_cta1: 'See projects', hero_cta2: 'Talk to me',
+    sobre_title: 'About',
+    sobre_text: 'I build digital products focused on real small-business problems: customer service, organization and management. Each project below started from a real need and is available for you to buy or try.',
+    projetos_title: 'Projects', projetos_subtitle: 'Ready-made products, available now.',
+    portfolio_title: 'Portfolio', portfolio_subtitle: 'Screens and interfaces in use.', portfolio_placeholder: 'Product screen',
+    planos_title: 'Plans & Pricing', planos_subtitle: 'For those who want a custom system.',
+    plan1_tag: 'Consulting', plan1_price: 'On request', plan1_desc: 'Diagnosis and system recommendation for your business.', plan1_cta: 'Talk to me',
+    plan2_tag: 'Ready product', plan2_price: 'From $29.90/mo', plan2_desc: 'Get one of the ready-made products, like Marina SDR, and start using it in minutes.', plan2_cta: 'See projects', plan2_badge: 'Most popular',
+    plan3_tag: 'Custom-built', plan3_price: 'Custom project', plan3_desc: 'An exclusive system, built from scratch, for your specific case.', plan3_cta: 'Request a quote',
+    contato_title: "Let's talk about your project?", contato_cta: 'Send an email',
+    footer_termos: 'Terms', footer_privacidade: 'Privacy',
+    proj_marina_tag: 'WhatsApp · AI', proj_marina_desc: 'An AI assistant on WhatsApp that answers, clears doubts and qualifies customers 24/7.', proj_marina_cta: 'See project',
+    proj_kate_tag: 'Legal · AI', proj_kate_desc: 'AI assistant for law firms to organize deadlines and client service.', proj_kate_cta: 'Coming soon',
+    proj_alma_tag: 'Vehicle protection', proj_alma_desc: 'Complete system for vehicle protection associations to sell fully online.', proj_alma_cta: 'See project',
+    proj_nefi_tag: 'Management', proj_nefi_desc: 'Academic management system for schools to run classes and students.', proj_nefi_cta: 'Coming soon',
+  },
+  es: {
+    nav_home: 'Inicio', nav_sobre: 'Sobre mí', nav_projetos: 'Proyectos', nav_portfolio: 'Portafolio', nav_planos: 'Planes y Precios', nav_contato: 'Contacto',
+    header_cta: 'Hablemos',
+    hero_pill: 'Estudio de software independiente',
+    hero_title: 'Sistemas listos para que tu negocio funcione solo',
+    hero_desc: 'Soy desarrollador independiente y creo productos digitales completos — desde asistentes de IA hasta sistemas de gestión — listos para usar o adaptar a tu negocio.',
+    hero_cta1: 'Ver proyectos', hero_cta2: 'Hablemos',
+    sobre_title: 'Sobre mí',
+    sobre_text: 'Construyo productos digitales enfocados en resolver problemas reales de pequeños negocios: atención, organización y gestión. Cada proyecto nació de una necesidad concreta y está disponible para adquirir o probar.',
+    projetos_title: 'Proyectos', projetos_subtitle: 'Productos listos, disponibles ahora.',
+    portfolio_title: 'Portafolio', portfolio_subtitle: 'Pantallas e interfaces en uso.', portfolio_placeholder: 'Pantalla del producto',
+    planos_title: 'Planes y Precios', planos_subtitle: 'Para quien quiere un sistema a medida.',
+    plan1_tag: 'Consultoría', plan1_price: 'A consultar', plan1_desc: 'Diagnóstico y recomendación de sistema para tu negocio.', plan1_cta: 'Hablemos',
+    plan2_tag: 'Producto listo', plan2_price: 'Desde $29,90/mes', plan2_desc: 'Adquiere uno de los productos listos, como Marina SDR, y empieza a usarlo en minutos.', plan2_cta: 'Ver proyectos', plan2_badge: 'Más popular',
+    plan3_tag: 'A medida', plan3_price: 'Proyecto personalizado', plan3_desc: 'Sistema exclusivo, desde cero, para tu caso específico.', plan3_cta: 'Solicitar presupuesto',
+    contato_title: '¿Hablamos de tu proyecto?', contato_cta: 'Enviar correo',
+    footer_termos: 'Términos', footer_privacidade: 'Privacidad',
+    proj_marina_tag: 'WhatsApp · IA', proj_marina_desc: 'Asistente de IA en WhatsApp que responde, resuelve dudas y califica clientes 24h.', proj_marina_cta: 'Ver proyecto',
+    proj_kate_tag: 'Legal · IA', proj_kate_desc: 'Asistente de IA para despachos de abogados organizar plazos y atención.', proj_kate_cta: 'Próximamente',
+    proj_alma_tag: 'Protección vehicular', proj_alma_desc: 'Sistema completo para que asociaciones de protección vehicular vendan 100% online.', proj_alma_cta: 'Ver proyecto',
+    proj_nefi_tag: 'Gestión', proj_nefi_desc: 'Sistema de gestión académica para que escuelas administren clases y alumnos.', proj_nefi_cta: 'Próximamente',
+  },
+  fr: {
+    nav_home: 'Accueil', nav_sobre: 'À propos', nav_projetos: 'Projets', nav_portfolio: 'Portfolio', nav_planos: 'Offres et Tarifs', nav_contato: 'Contact',
+    header_cta: 'Discutons',
+    hero_pill: 'Studio de logiciels indépendant',
+    hero_title: 'Des systèmes prêts à faire tourner votre commerce tout seul',
+    hero_desc: "Je suis développeur indépendant et je crée des produits numériques complets — d'assistants IA à des systèmes de gestion — prêts à l'emploi ou adaptables à votre commerce.",
+    hero_cta1: 'Voir les projets', hero_cta2: 'Discutons',
+    sobre_title: 'À propos',
+    sobre_text: 'Je conçois des produits numériques centrés sur les vrais problèmes des petits commerces : service client, organisation et gestion. Chaque projet ci-dessous répond à un besoin concret et est disponible à l’achat ou à l’essai.',
+    projetos_title: 'Projets', projetos_subtitle: 'Produits prêts, disponibles dès maintenant.',
+    portfolio_title: 'Portfolio', portfolio_subtitle: 'Écrans et interfaces en usage.', portfolio_placeholder: 'Écran du produit',
+    planos_title: 'Offres et Tarifs', planos_subtitle: 'Pour qui veut un système sur mesure.',
+    plan1_tag: 'Conseil', plan1_price: 'Sur devis', plan1_desc: 'Diagnostic et recommandation de système pour votre commerce.', plan1_cta: 'Discutons',
+    plan2_tag: 'Produit prêt', plan2_price: 'À partir de 29,90€/mois', plan2_desc: 'Adoptez un des produits prêts, comme Marina SDR, et commencez en quelques minutes.', plan2_cta: 'Voir les projets', plan2_badge: 'Le plus populaire',
+    plan3_tag: 'Sur mesure', plan3_price: 'Projet personnalisé', plan3_desc: 'Système exclusif, conçu de zéro, pour votre cas précis.', plan3_cta: 'Demander un devis',
+    contato_title: 'Parlons de votre projet ?', contato_cta: 'Envoyer un e-mail',
+    footer_termos: 'Conditions', footer_privacidade: 'Confidentialité',
+    proj_marina_tag: 'WhatsApp · IA', proj_marina_desc: "Assistante IA sur WhatsApp qui répond, renseigne et qualifie vos clients 24h/24.", proj_marina_cta: 'Voir le projet',
+    proj_kate_tag: 'Juridique · IA', proj_kate_desc: "Assistant IA pour cabinets d'avocats afin d'organiser délais et accueil.", proj_kate_cta: 'Bientôt',
+    proj_alma_tag: 'Protection automobile', proj_alma_desc: 'Système complet pour que les associations de protection automobile vendent 100% en ligne.', proj_alma_cta: 'Voir le projet',
+    proj_nefi_tag: 'Gestion', proj_nefi_desc: 'Système de gestion académique pour gérer classes et élèves.', proj_nefi_cta: 'Bientôt',
+  },
+};
+
+class Component extends DCLogic {
+  state = { theme: null, lang: null };
+
+  componentDidUpdate(prevProps) {
+    if (prevProps.defaultTheme !== this.props.defaultTheme) this.setState({ theme: null });
+  }
+
+  toggleTheme = () => {
+    this.setState(s => ({ theme: (s.theme || this.props.defaultTheme || 'dark') === 'dark' ? 'light' : 'dark' }));
+  };
+
+  onLangChange = (e) => {
+    this.setState({ lang: e.target.value });
+  };
+
+  renderVals() {
+    const theme = this.state.theme || this.props.defaultTheme || 'dark';
+    const dark = theme === 'dark';
+    const lang = this.state.lang || this.props.defaultLang || 'pt-BR';
+    const t = DICT[lang] || DICT['pt-BR'];
+    const accentGradient = 'linear-gradient(135deg,#7C5CFF,#4C6FFF)';
+    const cardBg = dark ? 'rgba(255,255,255,0.04)' : '#FFFFFF';
+    const border = dark ? 'rgba(255,255,255,0.08)' : '#E7E8F0';
+    const textPrimary = dark ? '#F5F6FA' : '#14131F';
+    const textSecondary = dark ? '#9CA3B8' : '#5B5F73';
+
+    const projects = [
+      { slotId: 'proj-marina', placeholder: t.proj_marina_tag, tag: t.proj_marina_tag, name: 'Marina SDR', description: t.proj_marina_desc, href: 'Marina SDR.dc.html', cta: t.proj_marina_cta },
+      { slotId: 'proj-alma', placeholder: t.proj_alma_tag, tag: t.proj_alma_tag, name: 'AlmaSGA', description: t.proj_alma_desc, href: 'AlmaSGA.dc.html', cta: t.proj_alma_cta },
+      { slotId: 'proj-kate', placeholder: t.proj_kate_tag, tag: t.proj_kate_tag, name: 'Kate Jus', description: t.proj_kate_desc, href: '#', cta: t.proj_kate_cta },
+      { slotId: 'proj-nefi', placeholder: t.proj_nefi_tag, tag: t.proj_nefi_tag, name: 'Nefi Sga', description: t.proj_nefi_desc, href: '#', cta: t.proj_nefi_cta },
+    ];
+
+    const baseCard = `background:${cardBg}; border:1px solid ${border}; border-radius:16px; padding:28px; display:flex; flex-direction:column; gap:10px; position:relative;`;
+    const highlightCard = `background:${cardBg}; border:2px solid #8B6CFF; border-radius:16px; padding:28px; display:flex; flex-direction:column; gap:10px; position:relative;`;
+    const baseBtn = `margin-top:8px; text-align:center; background:${cardBg}; border:1px solid ${border}; color:${textPrimary}; font-weight:600; font-size:14px; padding:12px; border-radius:10px; text-decoration:none;`;
+    const gradBtn = `margin-top:8px; text-align:center; background:${accentGradient}; color:#fff; font-weight:600; font-size:14px; padding:12px; border-radius:10px; text-decoration:none;`;
+
+    const planCards = [
+      { tag: t.plan1_tag, price: t.plan1_price, desc: t.plan1_desc, cta: t.plan1_cta, href: '#contato', badge: null, cardStyle: baseCard, btnStyle: baseBtn },
+      { tag: t.plan2_tag, price: t.plan2_price, desc: t.plan2_desc, cta: t.plan2_cta, href: '#projetos', badge: t.plan2_badge, cardStyle: highlightCard, btnStyle: gradBtn },
+      { tag: t.plan3_tag, price: t.plan3_price, desc: t.plan3_desc, cta: t.plan3_cta, href: '#contato', badge: null, cardStyle: baseCard, btnStyle: baseBtn },
+    ];
+
+    return {
+      bg: dark ? '#0B0E17' : '#F7F7FB',
+      headerBg: dark ? 'rgba(11,14,23,0.75)' : 'rgba(247,247,251,0.75)',
+      cardBg, pillBg: dark ? 'rgba(139,108,255,0.15)' : 'rgba(139,108,255,0.1)', border, textPrimary, textSecondary,
+      accentSolid: '#8B6CFF', accentGradient,
+      themeIcon: dark ? '☀' : '☾',
+      toggleTheme: this.toggleTheme,
+      lang, langs: LANGS, onLangChange: this.onLangChange,
+      logoColoridoDisplay: dark ? 'none' : 'block',
+      logoBrancoDisplay: dark ? 'block' : 'none',
+      t, projects, planCards,
+    };
+  }
+}
+
+</script>
+</body>
+</html>

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="icon" type="image/png" href="./assets/favicon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script src="./image-slot.js"></script>
+  <style>
+    body { margin: 0; }
+    @media (max-width: 720px) {
+      .alma-hero-grid { grid-template-columns: 1fr !important; }
+      .alma-hero-grid > div:last-child { order: -1; }
+    }
+  </style>
+</helmet>
+<div style="font-family:'Inter',sans-serif; background:{{ bg }}; color:{{ textPrimary }}; min-height:100vh;">
+
+  <header style="position:sticky; top:0; z-index:20; display:flex; align-items:center; justify-content:space-between; padding:16px 24px; background:{{ headerBg }}; backdrop-filter:blur(10px); border-bottom:1px solid {{ border }}; gap:12px; flex-wrap:wrap;">
+    <div style="display:flex; align-items:center; gap:14px;">
+      <a href="Antum.dc.html" style="display:flex; align-items:center;">
+        <img src="./assets/antum-logo-colorido.png" alt="Antum" style="height:40px; width:auto; display:{{ logoColoridoDisplay }};" />
+        <img src="./assets/antum-logo-branco.png" alt="Antum" style="height:40px; width:auto; display:{{ logoBrancoDisplay }};" />
+      </a>
+      <div style="font-family:'Poppins',sans-serif; font-weight:800; font-size:20px;">Alma<span style="background:{{ accentGradient }}; -webkit-background-clip:text; background-clip:text; color:transparent;">SGA</span></div>
+    </div>
+    <div style="display:flex; align-items:center; gap:10px;">
+      <button onClick="{{ toggleTheme }}" style="width:36px; height:36px; border-radius:50%; border:1px solid {{ border }}; background:{{ cardBg }}; color:{{ textPrimary }}; cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center;">{{ themeIcon }}</button>
+      <a href="#" style="background:{{ accentGradient }}; color:#fff; font-weight:600; font-size:14px; padding:10px 18px; border-radius:10px; text-decoration:none;">Começar grátis</a>
+    </div>
+  </header>
+
+  <section class="alma-hero-grid" style="display:grid; grid-template-columns:1.1fr 1fr; gap:40px; align-items:center; max-width:1080px; margin:0 auto; padding:56px 24px;">
+    <div>
+      <h1 style="font-family:'Poppins',sans-serif; font-size:clamp(28px,5vw,42px); font-weight:800; line-height:1.15; letter-spacing:-0.02em; margin:0 0 18px;">O sistema completo pra sua associação de proteção veicular</h1>
+      <p style="font-size:17px; line-height:1.6; color:{{ textSecondary }}; margin:0 0 28px;">Capte, cote, cadastre, vistorie e cobre — tudo num lugar só. Venda 100% online, sem intervenção manual.</p>
+      <a href="#" style="display:inline-block; background:{{ accentGradient }}; color:#fff; font-weight:700; font-size:17px; padding:16px 30px; border-radius:12px; text-decoration:none;">Começar grátis</a>
+    </div>
+    <div>
+      <image-slot id="hero-demo" shape="rounded" radius="20" style="width:100%; height:340px;" placeholder="Print do painel AlmaSGA"></image-slot>
+    </div>
+  </section>
+
+  <section style="padding:16px 24px 56px; max-width:1080px; margin:0 auto; border-top:1px solid {{ border }};">
+    <h2 style="font-family:'Poppins',sans-serif; font-size:26px; font-weight:700; text-align:center; margin:40px 0 32px;">Tudo que sua associação precisa</h2>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:20px;">
+      <sc-for list="{{ features }}" as="f" hint-placeholder-count="10">
+        <div style="background:{{ cardBg }}; border:1px solid {{ border }}; border-radius:14px; padding:22px; display:flex; flex-direction:column; gap:8px;">
+          <div style="font-size:15px; font-weight:700;">{{ f.title }}</div>
+          <p style="font-size:14px; line-height:1.6; color:{{ textSecondary }}; margin:0;">{{ f.desc }}</p>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section style="padding:56px 24px; max-width:1080px; margin:0 auto; border-top:1px solid {{ border }};">
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:20px;">
+      <sc-for list="{{ benefits }}" as="b" hint-placeholder-count="4">
+        <div style="background:{{ cardBg }}; border:1px solid {{ border }}; border-radius:14px; padding:22px; text-align:center;">
+          <p style="font-size:15px; font-weight:700; line-height:1.5; margin:0;">{{ b }}</p>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section id="planos" style="padding:56px 24px; max-width:1080px; margin:0 auto; border-top:1px solid {{ border }};">
+    <h2 style="font-family:'Poppins',sans-serif; font-size:26px; font-weight:700; text-align:center; margin:0 0 40px;">Planos</h2>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:20px;">
+      <sc-for list="{{ plans }}" as="pl" hint-placeholder-count="4">
+        <div style="{{ pl.cardStyle }}">
+          <sc-if value="{{ pl.badge }}"><div style="position:absolute; top:-12px; right:20px; background:{{ accentGradient }}; color:#fff; font-size:11px; font-weight:700; padding:4px 12px; border-radius:999px;">{{ pl.badge }}</div></sc-if>
+          <div style="font-size:13px; font-weight:600; color:{{ textSecondary }}; text-transform:uppercase; letter-spacing:.03em;">{{ pl.name }}</div>
+          <div style="font-family:'Poppins',sans-serif; font-size:26px; font-weight:800; margin:6px 0 14px;">{{ pl.price }}</div>
+          <p style="font-size:14px; color:{{ textSecondary }}; line-height:1.6; margin:0 0 20px; flex:1;">{{ pl.desc }}</p>
+          <a href="#" style="{{ pl.btnStyle }}">Assinar</a>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section style="padding:0 24px 56px; max-width:1080px; margin:0 auto; text-align:center;">
+    <p style="font-size:13px; color:{{ textSecondary }}; margin:0;">Feito para o setor — cadastrado conforme a LC 213/2025.</p>
+  </section>
+
+  <section style="padding:64px 24px; max-width:1080px; margin:0 auto; border-top:1px solid {{ border }}; text-align:center;">
+    <h2 style="font-family:'Poppins',sans-serif; font-size:26px; font-weight:800; margin:0 0 24px;">Leve sua associação pro digital hoje</h2>
+    <a href="#" style="display:inline-block; background:{{ accentGradient }}; color:#fff; font-weight:700; font-size:17px; padding:16px 32px; border-radius:12px; text-decoration:none;">Começar grátis</a>
+  </section>
+
+  <footer style="padding:32px 24px; max-width:1080px; margin:0 auto; display:flex; flex-wrap:wrap; gap:16px; align-items:center; justify-content:space-between; border-top:1px solid {{ border }};">
+    <img src="./assets/antum-logo-colorido.png" alt="Antum" style="height:28px; width:auto; display:{{ logoColoridoDisplay }};" />
+    <img src="./assets/antum-logo-branco.png" alt="Antum" style="height:28px; width:auto; display:{{ logoBrancoDisplay }};" />
+    <div style="display:flex; gap:20px; font-size:13px; color:{{ textSecondary }};">
+      <a href="mailto:contato@almasga.com.br" style="color:inherit; text-decoration:none;">contato@almasga.com.br</a>
+      <a href="#" style="color:inherit; text-decoration:none;">Termos</a>
+      <a href="#" style="color:inherit; text-decoration:none;">Privacidade</a>
+    </div>
+  </footer>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {}, &quot;defaultTheme&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;light&quot;, &quot;options&quot;: [&quot;dark&quot;, &quot;light&quot;], &quot;tsType&quot;: &quot;string&quot;}, &quot;planoDestaque&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;ate300&quot;, &quot;options&quot;: [&quot;free&quot;, &quot;ate300&quot;, &quot;ate600&quot;, &quot;ilimitado&quot;], &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Planos&quot;}}">
+class Component extends DCLogic {
+  state = { theme: null };
+
+  componentDidUpdate(prevProps) {
+    if (prevProps.defaultTheme !== this.props.defaultTheme) this.setState({ theme: null });
+  }
+
+  toggleTheme = () => {
+    this.setState(s => ({ theme: (s.theme || this.props.defaultTheme || 'dark') === 'dark' ? 'light' : 'dark' }));
+  };
+
+  renderVals() {
+    const theme = this.state.theme || this.props.defaultTheme || 'dark';
+    const dark = theme === 'dark';
+    const accentGradient = 'linear-gradient(135deg,#7C5CFF,#4C6FFF)';
+    const cardBg = dark ? 'rgba(255,255,255,0.04)' : '#FFFFFF';
+    const border = dark ? 'rgba(255,255,255,0.08)' : '#E7E8F0';
+    const textPrimary = dark ? '#F5F6FA' : '#14131F';
+    const textSecondary = dark ? '#9CA3B8' : '#5B5F73';
+
+    const baseCard = `background:${cardBg}; border:1px solid ${border}; border-radius:16px; padding:26px; display:flex; flex-direction:column; position:relative;`;
+    const highlightCard = `background:${cardBg}; border:2px solid #8B6CFF; border-radius:16px; padding:26px; display:flex; flex-direction:column; position:relative;`;
+    const baseBtn = `text-align:center; background:${cardBg}; border:1px solid ${border}; color:${textPrimary}; font-weight:600; font-size:14px; padding:12px; border-radius:10px; text-decoration:none;`;
+    const gradBtn = `text-align:center; background:${accentGradient}; color:#fff; font-weight:600; font-size:14px; padding:12px; border-radius:10px; text-decoration:none;`;
+
+    const highlightPlan = this.props.planoDestaque ?? 'ate300';
+
+    const plans = [
+      { key: 'free', name: 'Free', price: 'Grátis', desc: 'Pra começar e testar o sistema sem custo.' },
+      { key: 'ate300', name: 'Até 300 associados', price: 'R$ 280/mês', desc: 'Toda a operação digital pra associações em crescimento.' },
+      { key: 'ate600', name: 'Até 600 associados', price: 'R$ 500/mês', desc: 'Mais volume, mesma operação simples.' },
+      { key: 'ilimitado', name: 'Ilimitado', price: 'R$ 900/mês', desc: 'Acima de 600 associados, sem limite de crescimento.' },
+    ].map(p => ({
+      ...p,
+      badge: p.key === highlightPlan ? 'Mais popular' : null,
+      cardStyle: p.key === highlightPlan ? highlightCard : baseCard,
+      btnStyle: p.key === highlightPlan ? gradBtn : baseBtn,
+    }));
+
+    return {
+      bg: dark ? '#0B0E17' : '#F7F7FB',
+      headerBg: dark ? 'rgba(11,14,23,0.75)' : 'rgba(247,247,251,0.75)',
+      cardBg, border, textPrimary, textSecondary,
+      accentGradient,
+      themeIcon: dark ? '☀' : '☾',
+      toggleTheme: this.toggleTheme,
+      logoColoridoDisplay: dark ? 'none' : 'block',
+      logoBrancoDisplay: dark ? 'block' : 'none',
+      features: [
+        { title: 'Cotação online que vende sozinha', desc: 'Funil público onde o cliente cota o próprio veículo (busca FIPE, calcula participação e mensalidade) e já vira lead.' },
+        { title: 'Gestão de leads e vendas', desc: 'CRM com kanban, filtros, distribuição por consultor e rastreamento de origem (UTM).' },
+        { title: 'Cadastro de associados completo', desc: 'Wizard passo a passo, upload de documentos (CNH, CRLV, foto), veículos, cotas e rateio.' },
+        { title: 'Vistoria remota pelo celular', desc: 'Gera um link, envia por WhatsApp/e-mail, o cliente sobe as fotos do veículo sozinho, com prazo e status.' },
+        { title: 'Cotações, coberturas e contratos', desc: 'Cálculo automático (FIPE, participação por tipo de veículo), catálogo de coberturas e assistências, proposta com aceite online e contrato por WhatsApp/e-mail.' },
+        { title: 'Equipe e permissões', desc: 'Consultores, regiões/sedes e papéis (admin, regional, financeiro, vistoriador, consultor).' },
+        { title: 'Atendimento com IA (opcional)', desc: 'Um agente que atende e qualifica no WhatsApp 24h.' },
+        { title: 'Sua marca (white-label)', desc: 'Cores, logo e domínio da sua associação. Seus clientes nem sabem que existe o AlmaSGA por trás.' },
+        { title: 'App do consultor', desc: 'Cadastro em campo pelo celular.' },
+        { title: 'Pronto pra LGPD', desc: 'Consentimento, política de privacidade e linguagem correta do setor.' },
+      ],
+      benefits: ['Venda enquanto dorme', 'Sua associação profissional como as grandes', 'Configura em minutos, sem TI', 'Sua marca, não a nossa'],
+      plans,
+    };
+  }
+}
+
+</script>
+</body>
+</html>

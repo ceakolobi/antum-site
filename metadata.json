@@ -1,0 +1,6 @@
+{
+  "name": "ANTUM — AI & Automation Studio",
+  "description": "Estúdio de Inteligência Artificial, agentes inteligentes, automações de processos, RPA e software sob medida. Transformamos processos manuais em sistemas que trabalham sozinhos.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

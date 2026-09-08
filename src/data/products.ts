@@ -238,21 +238,21 @@ export const productsData: Product[] = [
     demoType: 'pipeline',
   },
   {
-    id: 'nefi',
-    name: 'Néfi — Plataforma de RPA com Geração Automática de Robôs',
-    slug: 'nefi',
+    id: 'nexus-rpa',
+    name: 'NEXUS RPA — Plataforma de RPA com Geração Automática de Robôs',
+    slug: 'nexus-rpa',
     category: 'RPA',
     categoryLabel: 'Robotic Process Automation',
-    badge: 'RPA Inteligente',
-    commercialHeadline: 'Descreva o processo. O Néfi monta o robô e executa — sem programação manual.',
+    badge: 'NEXUS RPA',
+    commercialHeadline: 'Descreva o processo. O NEXUS RPA monta o robô e executa — sem programação manual.',
     shortDescription: 'Plataforma open-core de RPA que lê especificações técnicas em linguagem natural e auto-gera estruturas de robôs para sistemas legados, portais fiscais e ERPs desktop.',
-    description: 'O Néfi combina IA generativa com o motor determinístico do rpaframework para criar uma nova categoria: RPA especificado. Você descreve o processo em linguagem estruturada, o Néfi sugere 3 arquiteturas de robô e monta o cenário de execução automaticamente. Sem jargão de programação, sem horas de configuração.',
+    description: 'O NEXUS RPA combina IA generativa com o motor determinístico do rpaframework para criar uma nova categoria: RPA especificado. Você descreve o processo em linguagem estruturada, o NEXUS RPA sugere 3 arquiteturas de robô e monta o cenário de execução automaticamente. Sem jargão de programação, sem horas de configuração.',
     heroImage: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=1200&auto=format&fit=crop',
     screenshots: [
       'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=1000&auto=format&fit=crop',
     ],
     problemBefore: {
-      title: 'Antes do Néfi',
+      title: 'Antes do NEXUS RPA',
       points: [
         'Configurar robôs de RPA exige programadores especializados e semanas de mapeamento de telas.',
         'Robôs quebram com qualquer mudança visual no sistema legado — manutenção constante e cara.',
@@ -261,7 +261,7 @@ export const productsData: Product[] = [
       consequence: 'RPA caro, frágil e restrito a quem tem orçamento e equipe técnica especializada.',
     },
     solutionNow: {
-      title: 'Agora com o Néfi',
+      title: 'Agora com o NEXUS RPA',
       points: [
         'Preenchimento de spec estruturada por departamento → sistema sugere 3 arquiteturas de robô prontas.',
         'Motor adaptativo com Browser Use como fallback para UIs instáveis (Receita Federal, SPAs).',
@@ -349,9 +349,9 @@ export const productsData: Product[] = [
       },
     ],
     integrations: ['TOTVS Protheus', 'SAP B1', 'Receita Federal (e-CAC)', 'eSocial', 'Excel / CSV', 'Slack / WhatsApp'],
-    ctaText: 'Ver o Néfi em ação',
-    seoTitle: 'Néfi RPA | Geração Automática de Robôs para Sistemas Legados — ANTUM',
-    seoDescription: 'Automatize processos em sistemas legados com o Néfi. Descreva o processo, a IA monta o robô — sem programação, sem quebrar sistemas existentes.',
+    ctaText: 'Ver o NEXUS RPA em ação',
+    seoTitle: 'NEXUS RPA | Geração Automática de Robôs para Sistemas Legados — ANTUM',
+    seoDescription: 'Automatize processos em sistemas legados com o NEXUS RPA. Descreva o processo, a IA monta o robô — sem programação, sem quebrar sistemas existentes.',
     demoType: 'rpa',
   },
   {
@@ -472,21 +472,21 @@ export const productsData: Product[] = [
     demoType: 'doc',
   },
   {
-    id: 'bia',
-    name: 'Bia — Gestão Inteligente para Salões e Barbearias',
-    slug: 'bia',
+    id: 'yafit',
+    name: 'Yafit — Gestão Inteligente para Salões e Barbearias',
+    slug: 'yafit',
     category: 'SaaS',
     categoryLabel: 'SaaS & Automação para Beleza',
     badge: 'SaaS Vertical',
     commercialHeadline: 'Agendamento, atendimento e gestão do seu salão — tudo automático via WhatsApp.',
     shortDescription: 'SaaS de gestão completa para salões de beleza e barbearias. Agendamento inteligente com automação via WhatsApp, dashboard de profissional e painel gerencial com métricas em tempo real.',
-    description: 'A Bia integra um sistema de agendamento moderno com automação de WhatsApp para eliminar o vai e vem de mensagens manuais. Clientes agendam sozinhos, recebem confirmações automáticas e lembretes antes do horário. Profissionais têm sua agenda organizada. Gerentes têm visão completa do negócio.',
+    description: 'O Yafit integra um sistema de agendamento moderno com automação de WhatsApp para eliminar o vai e vem de mensagens manuais. Clientes agendam sozinhos, recebem confirmações automáticas e lembretes antes do horário. Profissionais têm sua agenda organizada. Gerentes têm visão completa do negócio.',
     heroImage: 'https://images.unsplash.com/photo-1562322140-8baeececf3df?q=80&w=1200&auto=format&fit=crop',
     screenshots: [
       'https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?q=80&w=1000&auto=format&fit=crop',
     ],
     problemBefore: {
-      title: 'Antes da Bia',
+      title: 'Antes do Yafit',
       points: [
         'Agendamento por WhatsApp manual: recepcionista ou profissional para tudo para responder mensagens.',
         'Clientes sem confirmação de horário ligam para confirmar — telefone ocupado, cliente desiste.',
@@ -495,7 +495,7 @@ export const productsData: Product[] = [
       consequence: 'Tempo desperdiçado em operação administrativa e perda de receita por horários vagos.',
     },
     solutionNow: {
-      title: 'Agora com a Bia',
+      title: 'Agora com o Yafit',
       points: [
         'Agente de WhatsApp atende o cliente, mostra horários disponíveis e confirma o agendamento.',
         'Lembretes automáticos 24h e 1h antes — taxa de no-show cai drasticamente.',
@@ -507,7 +507,7 @@ export const productsData: Product[] = [
       {
         step: 1,
         title: 'Agendamento pelo Cliente',
-        description: 'Cliente manda mensagem no WhatsApp e a Bia responde com horários disponíveis.',
+        description: 'Cliente manda mensagem no WhatsApp e o Yafit responde com horários disponíveis.',
         detail: 'Escolha de serviço, profissional preferido e horário em menos de 2 minutos.',
       },
       {
@@ -583,9 +583,9 @@ export const productsData: Product[] = [
       },
     ],
     integrations: ['WhatsApp Business API', 'Evolution API', 'Google Calendar', 'Asaas (Pagamentos)', 'n8n', 'Supabase'],
-    ctaText: 'Conhecer a Bia',
-    seoTitle: 'Bia | Gestão Inteligente de Salão e Barbearia com IA — ANTUM',
-    seoDescription: 'Automatize o agendamento do seu salão ou barbearia com a Bia. WhatsApp inteligente, lembretes automáticos e dashboard gerencial completo.',
+    ctaText: 'Conhecer o Yafit',
+    seoTitle: 'Yafit | Gestão Inteligente de Salão e Barbearia com IA — ANTUM',
+    seoDescription: 'Automatize o agendamento do seu salão ou barbearia com o Yafit. WhatsApp inteligente, lembretes automáticos e dashboard gerencial completo.',
     demoType: 'sync',
   },
   {

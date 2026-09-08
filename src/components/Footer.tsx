@@ -51,8 +51,8 @@ export const Footer: React.FC = () => {
                 </Link>
               </li>
               <li>
-                <Link to="/portfolio/nefi" className="hover:text-cyan-400 transition-colors">
-                  Néfi (RPA & Sistemas Legados)
+                <Link to="/portfolio/nexus-rpa" className="hover:text-cyan-400 transition-colors">
+                  NEXUS RPA (RPA & Sistemas Legados)
                 </Link>
               </li>
               <li>
@@ -61,8 +61,8 @@ export const Footer: React.FC = () => {
                 </Link>
               </li>
               <li>
-                <Link to="/portfolio/bia" className="hover:text-cyan-400 transition-colors">
-                  Bia (Gestão de Salão & Barbearia)
+                <Link to="/portfolio/yafit" className="hover:text-cyan-400 transition-colors">
+                  Yafit (Gestão de Salão & Barbearia)
                 </Link>
               </li>
               <li>

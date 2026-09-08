@@ -6,6 +6,7 @@ import { Product } from '../types';
 import {
   Sparkles,
   ArrowRight,
+  ArrowUpRight,
   CheckCircle2,
   XCircle,
   Play,
@@ -112,17 +113,31 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ slug }) =>
 
               {/* CTAS */}
               <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
-                <button
-                  id="btn-product-conhecer"
-                  onClick={() => {
-                    const el = document.getElementById('product-demo');
-                    el?.scrollIntoView({ behavior: 'smooth' });
-                  }}
-                  className="px-6 py-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-white font-bold text-xs uppercase tracking-wider text-center transition-all flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <Play className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>Quero conhecer (Demonstração)</span>
-                </button>
+                {product.liveUrl ? (
+                  <a
+                    id="btn-product-live"
+                    href={product.liveUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-6 py-3.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-300 hover:text-white font-bold text-xs uppercase tracking-wider text-center transition-all flex items-center justify-center gap-2"
+                  >
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>Acessar Produto ao Vivo</span>
+                    <ArrowUpRight className="w-3.5 h-3.5" />
+                  </a>
+                ) : (
+                  <button
+                    id="btn-product-conhecer"
+                    onClick={() => {
+                      const el = document.getElementById('product-demo');
+                      el?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    className="px-6 py-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-white font-bold text-xs uppercase tracking-wider text-center transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <Play className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Quero conhecer (Demonstração)</span>
+                  </button>
+                )}
 
                 <button
                   id="btn-product-marina"

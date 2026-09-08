@@ -65,6 +65,11 @@ export const Footer: React.FC = () => {
                   Bia (Gestão de Salão & Barbearia)
                 </Link>
               </li>
+              <li>
+                <Link to="/portfolio/hagoth" className="hover:text-cyan-400 transition-colors">
+                  Hagoth (Criativos com IA)
+                </Link>
+              </li>
             </ul>
           </div>
 

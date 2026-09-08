@@ -589,6 +589,135 @@ export const productsData: Product[] = [
     demoType: 'sync',
   },
   {
+    id: 'hagoth',
+    name: 'Hagoth — Gerador de Criativos com IA',
+    slug: 'hagoth',
+    category: 'SaaS',
+    categoryLabel: 'SaaS de Conteúdo & Marketing Digital',
+    badge: 'Live em Produção',
+    commercialHeadline: 'Crie posts profissionais para Instagram em segundos — legenda, hashtags e imagem gerados por IA.',
+    shortDescription: 'SaaS que automatiza a criação de criativos para redes sociais. A IA gera texto persuasivo, hashtags otimizadas e imagem personalizada com a identidade visual da sua marca.',
+    description: 'O Hagoth resolve o maior gargalo do marketing digital: a produção diária de conteúdo. Em vez de horas no Canva e no ChatGPT separados, o criativo completo — legenda, hashtags e imagem — sai em segundos. A marca do cliente é aplicada automaticamente no post, garantindo consistência visual sem esforço manual.',
+    heroImage: 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?q=80&w=1200&auto=format&fit=crop',
+    screenshots: [
+      'https://images.unsplash.com/photo-1432888622747-4eb9a8efeb07?q=80&w=1000&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?q=80&w=1000&auto=format&fit=crop',
+    ],
+    liveUrl: 'https://hagoth.antum.com.br',
+    problemBefore: {
+      title: 'Antes do Hagoth',
+      points: [
+        'Horas perdidas toda semana criando post no Canva, escrevendo legenda no ChatGPT e pesquisando hashtags manualmente.',
+        'Inconsistência visual: identidade da marca aplicada de forma diferente a cada post.',
+        'Criadores e pequenas agências travados na operação de produção em vez de focar em estratégia.',
+      ],
+      consequence: 'Feed irregular, sem constância e sem padrão visual — que derruba o alcance orgânico.',
+    },
+    solutionNow: {
+      title: 'Agora com o Hagoth',
+      points: [
+        'Criativo completo (imagem + legenda + hashtags) gerado em menos de 30 segundos.',
+        'Logo da marca aplicada automaticamente no post com posição, tamanho e opacidade configuráveis.',
+        'Agenda integrada: lembretes de publicação por rede social para manter a consistência.',
+      ],
+      outcome: 'Feed profissional, frequente e com identidade visual consistente — sem equipe de design.',
+    },
+    workflowSteps: [
+      {
+        step: 1,
+        title: 'Descreva o Post',
+        description: 'Informe o tema, produto ou campanha desejada.',
+        detail: 'O modelo de IA interpreta o contexto do negócio para criar conteúdo relevante.',
+      },
+      {
+        step: 2,
+        title: 'IA Gera o Criativo',
+        description: 'Legenda persuasiva, hashtags estratégicas e imagem em alta resolução.',
+        detail: 'Claude gera o texto; DALL-E 3 cria a imagem personalizada ao tema.',
+      },
+      {
+        step: 3,
+        title: 'Aplique sua Marca',
+        description: 'Sua logo é sobreposta na imagem com um clique.',
+        detail: 'Controle total de posição, tamanho e opacidade para cada post.',
+      },
+      {
+        step: 4,
+        title: 'Agende e Publique',
+        description: 'Defina a data/hora de publicação e receba lembretes por rede.',
+        detail: 'Biblioteca de posts salvos para reutilizar e iterar conteúdos que performaram.',
+      },
+    ],
+    features: [
+      {
+        title: 'Geração de Imagem com DALL-E 3',
+        description: 'Imagens originais e em alta resolução criadas especificamente para cada post.',
+        icon: 'Image',
+      },
+      {
+        title: 'Texto com IA Avançada',
+        description: 'Legendas naturais e hashtags estratégicas geradas por Claude (Anthropic).',
+        icon: 'Brain',
+      },
+      {
+        title: 'Marca Personalizada no Post',
+        description: 'Upload da logo da empresa e aplicação automática com controle visual total.',
+        icon: 'Sparkles',
+      },
+      {
+        title: 'Agenda de Publicação',
+        description: 'Calendário de conteúdo com lembretes por rede social para manter frequência.',
+        icon: 'Calendar',
+      },
+      {
+        title: 'Painel Admin Completo',
+        description: 'Gestão de usuários, posts gerados, feedbacks e controle de planos.',
+        icon: 'Shield',
+      },
+      {
+        title: 'Trial Grátis — Sem Cartão',
+        description: '10 posts gratuitos por 7 dias para testar antes de assinar qualquer plano.',
+        icon: 'Zap',
+      },
+    ],
+    benefits: [
+      {
+        metric: '30s',
+        label: 'Criativo Completo',
+        description: 'Imagem + legenda + hashtags gerados em menos de 30 segundos.',
+      },
+      {
+        metric: '10×',
+        label: 'Mais Rápido',
+        description: 'Comparado ao fluxo manual (Canva + ChatGPT + pesquisa de hashtag).',
+      },
+      {
+        metric: '100%',
+        label: 'Identidade Visual',
+        description: 'Logo da marca aplicada automaticamente em todos os posts gerados.',
+      },
+    ],
+    targetAudience: [
+      {
+        profile: 'Criadores de Conteúdo & Influenciadores',
+        useCase: 'Produzir volume de conteúdo de qualidade sem depender de designer ou copywriter.',
+      },
+      {
+        profile: 'Pequenas Agências de Marketing',
+        useCase: 'Escalar produção de criativos para múltiplos clientes sem aumentar equipe.',
+      },
+      {
+        profile: 'Pequenas e Médias Empresas',
+        useCase: 'Manter presença digital ativa e profissional sem contratar time de marketing.',
+      },
+    ],
+    integrations: ['Anthropic Claude', 'OpenAI DALL-E 3', 'Supabase', 'Kiwify', 'EasyPanel', 'React 19 + Vite 7'],
+    ctaText: 'Testar o Hagoth grátis',
+    seoTitle: 'Hagoth — Gerador de Criativos para Instagram com IA | ANTUM',
+    seoDescription: 'Crie posts completos para Instagram em segundos com IA. Legenda, hashtags e imagem com a identidade visual da sua marca. 10 posts grátis para começar.',
+    demoType: 'pipeline',
+  },
+  {
     id: 'antum-custom',
     name: 'ANTUM Custom — Sistemas & Plataformas Sob Medida',
     slug: 'antum-custom',

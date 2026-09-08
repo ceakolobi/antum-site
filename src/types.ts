@@ -20,6 +20,7 @@ export interface Product {
   description: string;
   heroImage: string;
   screenshots: string[];
+  liveUrl?: string;
   problemBefore: {
     title: string;
     points: string[];

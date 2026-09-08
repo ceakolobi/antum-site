@@ -129,7 +129,7 @@ export const productsData: Product[] = [
     commercialHeadline: 'Gestão completa de associação de proteção veicular — da cotação ao contrato, com IA integrada.',
     shortDescription: 'Plataforma SaaS multi-tenant para associações de proteção veicular. CRM, cotações, contratos, vistorias e mensalidades — tudo automatizado com Emily, a SDR de IA integrada.',
     description: 'O Harmony é um sistema de gestão completo para associações de proteção veicular (modelo mutualista conforme LC 213/2025). Cobre todo o ciclo do associado: captação via agente de IA (Emily), cotação inteligente com tabela FIPE, contratação digital, vistoria remota e gestão financeira de mensalidades.',
-    heroImage: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?q=80&w=1200&auto=format&fit=crop',
+    heroImage: '/assets/harmony-hero.png',
     screenshots: [
       'https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=1000&auto=format&fit=crop',
       'https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=1000&auto=format&fit=crop',

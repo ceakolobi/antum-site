@@ -49,20 +49,14 @@ export const Navbar: React.FC = () => {
         <Link
           to="/"
           id="navbar-logo"
-          className="group flex items-center gap-3 focus:outline-none"
+          className="group relative focus:outline-none"
         >
-          <div className="relative w-9 h-9 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-md shadow-cyan-500/20 group-hover:shadow-cyan-500/40 transition-shadow">
-            <span className="font-extrabold text-white text-lg tracking-tighter">A</span>
-            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-[#0b0f17] animate-pulse" />
-          </div>
-          <div className="flex flex-col">
-            <span className="font-extrabold text-xl tracking-tight text-white group-hover:text-cyan-400 transition-colors">
-              ANTUM
-            </span>
-            <span className="text-[9px] font-mono tracking-widest text-slate-400 uppercase">
-              AI • AUTOMATION • SOFTWARE
-            </span>
-          </div>
+          <img
+            src="/assets/antum-logo-color.png"
+            alt="ANTUM Automação"
+            className="h-11 w-auto opacity-95 group-hover:opacity-100 transition-opacity drop-shadow-sm"
+          />
+          <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-[#0b0f17] animate-pulse" />
         </Link>
 
         {/* DESKTOP EXACT 5 LINKS */}

@@ -13,18 +13,12 @@ export const Footer: React.FC = () => {
           
           {/* BRAND COLUMN */}
           <div className="md:col-span-4 space-y-4">
-            <Link to="/" className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white font-extrabold text-lg">
-                A
-              </div>
-              <div>
-                <span className="font-extrabold text-xl tracking-tight text-white">
-                  ANTUM
-                </span>
-                <span className="block text-[9px] font-mono tracking-widest text-slate-400 uppercase">
-                  AI • AUTOMATION • SOFTWARE
-                </span>
-              </div>
+            <Link to="/" className="inline-block">
+              <img
+                src="/assets/antum-logo-color.png"
+                alt="ANTUM Automação"
+                className="h-12 w-auto opacity-90 hover:opacity-100 transition-opacity"
+              />
             </Link>
 
             <p className="text-sm text-slate-400 leading-relaxed max-w-sm">

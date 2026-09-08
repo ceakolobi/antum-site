@@ -52,9 +52,9 @@ export const Navbar: React.FC = () => {
           className="group relative focus:outline-none"
         >
           <img
-            src="/assets/antum-logo-color.png"
-            alt="ANTUM Automação"
-            className="h-11 w-auto opacity-95 group-hover:opacity-100 transition-opacity drop-shadow-sm"
+            src="/assets/antum-symbol.png"
+            alt="ANTUM"
+            className="h-10 w-auto opacity-95 group-hover:opacity-100 transition-opacity drop-shadow-sm"
           />
           <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-[#0b0f17] animate-pulse" />
         </Link>

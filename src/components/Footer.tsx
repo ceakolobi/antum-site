@@ -70,6 +70,11 @@ export const Footer: React.FC = () => {
                   Hagoth (Criativos com IA)
                 </Link>
               </li>
+              <li>
+                <Link to="/portfolio/sites-ia" className="hover:text-cyan-400 transition-colors">
+                  Sites & Landing Pages com IA
+                </Link>
+              </li>
             </ul>
           </div>
 

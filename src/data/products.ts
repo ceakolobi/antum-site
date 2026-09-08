@@ -718,6 +718,135 @@ export const productsData: Product[] = [
     demoType: 'pipeline',
   },
   {
+    id: 'sites-ia',
+    name: 'Sites & Landing Pages com IA Integrada',
+    slug: 'sites-ia',
+    category: 'SaaS',
+    categoryLabel: 'Desenvolvimento Web & Presença Digital',
+    badge: 'Entrega Rápida',
+    commercialHeadline: 'Sites profissionais e landing pages de alta conversão — com IA, WhatsApp e deploy em até 7 dias.',
+    shortDescription: 'Criação de sites institucionais, lojas e landing pages com design moderno, IA integrada (chat, qualificação de leads) e automação de atendimento via WhatsApp. Stack React + Vite + Tailwind hospedada no seu próprio domínio.',
+    description: 'A ANTUM desenvolve sites e landing pages que não são apenas vitrines — são sistemas ativos de captação. Cada entrega inclui design responsivo, componentes de IA para engajamento do visitante, integração com WhatsApp e deploy em domínio próprio. Exemplo real: coisaetal.antum.com.br, loja de produtos para o lar construída e publicada em menos de uma semana.',
+    heroImage: 'https://images.unsplash.com/photo-1467232004584-a241de8bcf5d?q=80&w=1200&auto=format&fit=crop',
+    screenshots: [
+      'https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=1000&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?q=80&w=1000&auto=format&fit=crop',
+    ],
+    liveUrl: 'https://coisaetal.antum.com.br',
+    problemBefore: {
+      title: 'Sem um site profissional',
+      points: [
+        'Negócio depende 100% de Instagram e WhatsApp — sem presença profissional na web.',
+        'Landing pages genéricas de construtores (Wix, Squarespace) com visual amador e sem diferencial.',
+        'Nenhuma automação de atendimento: cada lead exige resposta manual no WhatsApp.',
+      ],
+      consequence: 'Perda de credibilidade e leads que não convertem por falta de presença digital sólida.',
+    },
+    solutionNow: {
+      title: 'Com a ANTUM',
+      points: [
+        'Site ou landing page com identidade visual única, responsivo e rápido (React + Vite + Tailwind).',
+        'IA integrada: chat de qualificação, SDR automático ou FAQ inteligente direto na página.',
+        'Atendimento automático via WhatsApp conectado ao conteúdo e produtos do site.',
+      ],
+      outcome: 'Presença digital profissional que trabalha 24h — capturando e qualificando leads enquanto você dorme.',
+    },
+    workflowSteps: [
+      {
+        step: 1,
+        title: 'Briefing & Identidade',
+        description: 'Entendemos o negócio, público-alvo e objetivos da página.',
+        detail: 'Cores, tipografia, tom de voz e diferenciais competitivos mapeados em uma reunião.',
+      },
+      {
+        step: 2,
+        title: 'Design & Estrutura',
+        description: 'Protótipo do layout com as seções estratégicas definidas.',
+        detail: 'Hero, benefícios, prova social, CTA, FAQ e rodapé — cada seção com objetivo claro.',
+      },
+      {
+        step: 3,
+        title: 'Desenvolvimento & IA',
+        description: 'Código React + Tailwind com componentes de IA integrados.',
+        detail: 'Chat com LLM, integração WhatsApp e formulários de captação conectados ao CRM.',
+      },
+      {
+        step: 4,
+        title: 'Deploy & Domínio',
+        description: 'Publicação em EasyPanel no domínio do cliente em menos de 7 dias.',
+        detail: 'HTTPS automático, nginx otimizado e CI/CD via GitHub — atualizações sem downtime.',
+      },
+    ],
+    features: [
+      {
+        title: 'Design 100% Personalizado',
+        description: 'Nenhum template genérico — cada site reflete a identidade real do negócio.',
+        icon: 'Sparkles',
+      },
+      {
+        title: 'IA de Atendimento Integrada',
+        description: 'Chat inteligente que qualifica visitantes e encaminha para WhatsApp ou CRM.',
+        icon: 'Brain',
+      },
+      {
+        title: 'WhatsApp Automático',
+        description: 'Integração nativa com WhatsApp Business para atendimento e conversão 24/7.',
+        icon: 'Send',
+      },
+      {
+        title: 'Stack Moderna & Rápida',
+        description: 'React + Vite + Tailwind: carregamento rápido, SEO técnico e mobile-first.',
+        icon: 'Zap',
+      },
+      {
+        title: 'Deploy em Domínio Próprio',
+        description: 'Hospedagem no seu domínio via EasyPanel com HTTPS e CI/CD automático.',
+        icon: 'Globe',
+      },
+      {
+        title: 'Entrega em até 7 dias',
+        description: 'Sites institucionais e landing pages entregues em uma semana — sem enrolação.',
+        icon: 'Calendar',
+      },
+    ],
+    benefits: [
+      {
+        metric: '7 dias',
+        label: 'Prazo de Entrega',
+        description: 'Do briefing ao site publicado no ar com domínio próprio.',
+      },
+      {
+        metric: '24/7',
+        label: 'Atendimento Ativo',
+        description: 'IA e WhatsApp trabalhando por você mesmo fora do horário comercial.',
+      },
+      {
+        metric: '100%',
+        label: 'Código Proprietário',
+        description: 'Você fica com o código — sem dependência de plataforma de terceiros.',
+      },
+    ],
+    targetAudience: [
+      {
+        profile: 'Pequenos e Médios Negócios',
+        useCase: 'Substituir presença improvisada em redes sociais por site profissional com atendimento automático.',
+      },
+      {
+        profile: 'Lojas e E-commerces Simples',
+        useCase: 'Catálogo online com WhatsApp integrado para pedidos e atendimento rápido.',
+      },
+      {
+        profile: 'Lançamentos & Campanhas',
+        useCase: 'Landing pages de alta conversão para captura de leads e vendas diretas.',
+      },
+    ],
+    integrations: ['React + Vite + Tailwind', 'WhatsApp Business', 'EasyPanel', 'Docker + nginx', 'GitHub CI/CD', 'Anthropic / OpenAI'],
+    ctaText: 'Quero meu site com IA',
+    seoTitle: 'Sites & Landing Pages com IA Integrada — ANTUM',
+    seoDescription: 'Criação de sites profissionais e landing pages com IA de atendimento e WhatsApp automático. React + Vite + Tailwind, deploy em domínio próprio em até 7 dias.',
+    demoType: 'pipeline',
+  },
+  {
     id: 'antum-custom',
     name: 'ANTUM Custom — Sistemas & Plataformas Sob Medida',
     slug: 'antum-custom',

@@ -15,7 +15,7 @@ export const Footer: React.FC = () => {
           <div className="md:col-span-4 space-y-4">
             <Link to="/" className="inline-block">
               <img
-                src="/assets/antum-logo-full.png"
+                src="/assets/antum-logo-branca.png"
                 alt="ANTUM Automação"
                 className="h-12 w-auto opacity-90 hover:opacity-100 transition-opacity"
               />

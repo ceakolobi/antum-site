@@ -52,7 +52,7 @@ export const Navbar: React.FC = () => {
           className="group relative focus:outline-none"
         >
           <img
-            src="/assets/antum-symbol.png"
+            src="/assets/antum-symbol-white.png"
             alt="ANTUM"
             className="h-10 w-auto opacity-95 group-hover:opacity-100 transition-opacity drop-shadow-sm"
           />

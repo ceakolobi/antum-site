@@ -118,6 +118,7 @@ export const productsData: Product[] = [
     seoTitle: 'Marina SDR de IA | Prospecção e Qualificação Autônoma — ANTUM',
     seoDescription: 'Conheça a Marina, SDR de Inteligência Artificial criada pela ANTUM para qualificar leads, responder objeções e agendar reuniões comerciais 24/7.',
     demoType: 'chat',
+    liveUrl: 'https://sdr.antum.com.br',
   },
   {
     id: 'harmony',

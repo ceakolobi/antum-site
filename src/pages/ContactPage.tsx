@@ -141,12 +141,12 @@ export const ContactPage: React.FC = () => {
                   <div>
                     <span className="text-[10px] font-mono text-slate-500 block">WhatsApp Comercial</span>
                     <a
-                      href="https://wa.me/5511999999999?text=Ol%C3%A1%20ANTUM,%20vim%20pelo%20site%20e%20gostaria%20de%20um%20diagn%C3%B3stico."
+                      href="https://wa.me/5547988431352?text=Ol%C3%A1%20ANTUM,%20vim%20pelo%20site%20e%20gostaria%20de%20um%20diagn%C3%B3stico."
                       target="_blank"
                       rel="noopener noreferrer"
                       className="hover:text-cyan-300 font-medium"
                     >
-                      +55 (11) 99999-9999
+                      +55 (47) 98843-1352
                     </a>
                   </div>
                 </div>
@@ -155,7 +155,7 @@ export const ContactPage: React.FC = () => {
                   <MapPin className="w-4 h-4 text-indigo-400 shrink-0" />
                   <div>
                     <span className="text-[10px] font-mono text-slate-500 block">Sede & Engenharia</span>
-                    <span className="font-medium">São Paulo, SP — Brasil</span>
+                    <span className="font-medium">Florianópolis, SC — Brasil</span>
                   </div>
                 </div>
               </div>

@@ -1,4 +1,4 @@
-# Stage 1: Build React app
+# Stage 1: Build React app + server
 FROM node:20-alpine AS builder
 
 WORKDIR /app
@@ -9,15 +9,18 @@ RUN npm install
 COPY . .
 RUN npm run build
 
-# Stage 2: Serve com nginx
-FROM nginx:alpine
+# Stage 2: Run Node.js server (serves API + static frontend)
+FROM node:20-alpine
 
-# Nginx config com suporte a SPA routing
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+WORKDIR /app
 
-# Copia os arquivos do build
-COPY --from=builder /app/dist /usr/share/nginx/html
+# Copy compiled output (dist/ has React build AND dist/server.cjs)
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package*.json ./
 
-EXPOSE 80
+EXPOSE 3000
 
-CMD ["nginx", "-g", "daemon off;"]
+ENV NODE_ENV=production
+
+CMD ["node", "dist/server.cjs"]

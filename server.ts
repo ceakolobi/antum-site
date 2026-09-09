@@ -54,34 +54,72 @@ app.get('/api/diag', (req, res) => {
     keyLength: key.length,
     candidates: MODEL_CANDIDATES,
     lastCall: lastDiag,
+    lastLead,
     nodeEnv: process.env.NODE_ENV || null,
   });
 });
 
-// Lead capture endpoint
-const leadsDatabase: Array<{
-  id: string;
-  name?: string;
-  company?: string;
-  contact?: string;
-  challenge?: string;
-  solutionOfInterest?: string;
-  createdAt: string;
-}> = [];
+// --- Captura de lead ---------------------------------------------------------
+// Antes isso ficava num array em memoria: todo lead sumia a cada restart.
+// Agora grava no Supabase (projeto "alma") via a funcao SECURITY DEFINER
+// submit_site_lead — a chave publishable NAO e secreta, e o anon so pode
+// inserir por essa funcao, nunca ler a tabela.
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://vlqfwdpgdqusugwebfwx.supabase.co';
+const SUPABASE_ANON_KEY =
+  process.env.SUPABASE_ANON_KEY || 'sb_publishable_G9JhPOfn-rPV93AgBFM0ig_UNvAXiMf';
 
-app.post('/api/lead', (req, res) => {
+let lastLead: { at: string | null; stored: boolean; error: string | null } = {
+  at: null,
+  stored: false,
+  error: null,
+};
+
+app.post('/api/lead', async (req, res) => {
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+
   const { name, company, contact, challenge, solutionOfInterest } = req.body || {};
-  const leadRecord = {
-    id: `lead_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-    name: name || 'Lead anônimo',
-    company: company || 'Empresa não informada',
-    contact: contact || 'Sem contato',
-    challenge: challenge || 'Geral',
-    solutionOfInterest: solutionOfInterest || 'Não especificada',
-    createdAt: new Date().toISOString(),
+  const lead = {
+    p_name: name || null,
+    p_company: company || null,
+    p_contact: contact || null,
+    p_challenge: challenge || null,
+    p_solution_of_interest: solutionOfInterest || null,
+    p_user_agent: (req.headers['user-agent'] || '').toString().slice(0, 300) || null,
   };
-  leadsDatabase.push(leadRecord);
-  res.json({ success: true, leadId: leadRecord.id, message: 'Solicitação registrada com sucesso.' });
+
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/submit_site_lead`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify(lead),
+    });
+
+    if (!r.ok) {
+      const detail = await r.text();
+      throw new Error(`Supabase ${r.status}: ${detail.slice(0, 300)}`);
+    }
+
+    const newId = (await r.json()) as string | null;
+    lastLead = { at: new Date().toISOString(), stored: true, error: null };
+    return res.json({
+      success: true,
+      leadId: newId,
+      message: 'Solicitação registrada com sucesso.',
+    });
+  } catch (err: unknown) {
+    const message = String((err as { message?: string })?.message ?? err);
+    lastLead = { at: new Date().toISOString(), stored: false, error: message.slice(0, 400) };
+
+    // Se o banco falhar, o lead vai pro log do EasyPanel em vez de sumir.
+    console.error('[LEAD NAO GRAVADO NO BANCO]', message, JSON.stringify(lead));
+
+    // O visitante nao paga pelo nosso erro: nao pedimos pra digitar de novo.
+    return res.json({ success: true, leadId: null, message: 'Solicitação registrada com sucesso.' });
+  }
 });
 
 const SYSTEM_INSTRUCTION = `Você é a Marina, assistente de vendas da Antum.

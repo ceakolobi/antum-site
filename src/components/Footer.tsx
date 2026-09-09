@@ -148,7 +148,7 @@ export const Footer: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-6 font-mono text-[11px]">
-            <span>São Paulo, Brasil</span>
+            <span>Florianópolis, SC — Brasil</span>
             <span>•</span>
             <span className="text-slate-400">Transformamos processos em sistemas.</span>
           </div>

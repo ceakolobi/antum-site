@@ -25,10 +25,11 @@ function getGenAI(): GoogleGenAI | null {
 // Modelos candidatos, em ordem de preferencia. Se um estiver indisponivel
 // (aposentado, sem permissao na chave, etc) cai automaticamente pro proximo.
 const MODEL_CANDIDATES = [
+  'gemini-flash-latest', // apelido que acompanha a geracao mais nova — confirmado funcionando
+  'gemini-3.5-flash',
+  'gemini-3.5-flash-lite',
   'gemini-2.5-flash',
   'gemini-2.0-flash',
-  'gemini-flash-latest',
-  'gemini-2.5-flash-lite',
 ];
 
 // Diagnostico da ultima chamada (sem expor segredos)

@@ -117,7 +117,6 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ slug }) =>
                   <a
                     id="btn-product-live"
                     href={product.liveUrl}
-                    target="_blank"
                     rel="noopener noreferrer"
                     className="px-6 py-3.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-300 hover:text-white font-bold text-xs uppercase tracking-wider text-center transition-all flex items-center justify-center gap-2"
                   >
@@ -128,10 +127,7 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ slug }) =>
                 ) : (
                   <button
                     id="btn-product-conhecer"
-                    onClick={() => {
-                      const el = document.getElementById('product-demo');
-                      el?.scrollIntoView({ behavior: 'smooth' });
-                    }}
+                    onClick={() => openMarinaModal(`Olá Marina! Gostaria de conhecer mais sobre o ${product.name}.`)}
                     className="px-6 py-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-white font-bold text-xs uppercase tracking-wider text-center transition-all flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <Play className="w-3.5 h-3.5 text-cyan-400" />

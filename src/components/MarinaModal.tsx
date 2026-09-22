@@ -91,7 +91,7 @@ export const MarinaModal: React.FC = () => {
     setIsTyping(true);
 
     try {
-      const response = await fetch('/api/chat-marina', {
+      const response = await fetch('https://vlqfwdpgdqusugwebfwx.supabase.co/functions/v1/chat-marina', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

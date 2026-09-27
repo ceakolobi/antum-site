@@ -35,6 +35,7 @@ const plans = [
     items: [
       'Criação e implantação completa, sem custo',
       'Site no ar, hospedado e seguro',
+      'Formulário de contato e ícone do WhatsApp',
       '1 atualização por semana',
     ],
     marina: 'Olá Marina! Quero saber mais sobre o plano de site por R$ 70/mês.',
@@ -52,6 +53,19 @@ const plans = [
     ],
     marina: 'Olá Marina! Quero saber mais sobre o plano Site + Marina por R$ 99/mês.',
     cta: 'Quero site + Marina',
+  },
+  {
+    name: 'Loja virtual ou sistema (SaaS)',
+    price: 'R$ 180',
+    per: '/mês',
+    highlight: false,
+    items: [
+      'Criação e implantação completas, sem custo',
+      'Loja virtual ou sistema (SaaS) para o seu negócio',
+      'Marina, a SDR de IA, atendendo seus clientes',
+    ],
+    marina: 'Olá Marina! Quero saber mais sobre a loja virtual ou sistema com SDR por R$ 180/mês.',
+    cta: 'Quero loja ou sistema',
   },
 ];
 
@@ -118,9 +132,9 @@ export const HowItWorksPage: React.FC = () => {
 
         {/* PLANOS */}
         <section className="mb-20">
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-white mb-2">Dois planos, sem complicação</h2>
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-white mb-2">Três planos, sem complicação</h2>
           <p className="text-sm text-slate-400 mb-8">O registro do domínio é pago à parte, direto por você.</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {plans.map((p) => (
               <div
                 key={p.name}

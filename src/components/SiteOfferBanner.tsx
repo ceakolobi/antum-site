@@ -88,7 +88,8 @@ export const SiteOfferBanner: React.FC = () => {
           <p className="text-base text-slate-300 mt-3 leading-relaxed">
             A gente cria e coloca no ar <strong className="text-white">sem cobrar pela criação</strong>. Você paga só a
             mensalidade: <strong className="text-cyan-300">R$ 70/mês</strong>, ou{' '}
-            <strong className="text-cyan-300">R$ 99/mês com a Marina</strong> atendendo seus clientes.
+            <strong className="text-cyan-300">R$ 99/mês com a Marina</strong> atendendo seus clientes. Loja virtual ou
+            sistema com a Marina: <strong className="text-cyan-300">R$ 180/mês</strong>.
           </p>
         </div>
 

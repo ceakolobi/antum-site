@@ -171,6 +171,54 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ slug }) =>
           </div>
         </section>
 
+        {/* SITES ENTREGUES (vitrine) */}
+        {product.showcase && product.showcase.length > 0 && (
+          <section id="sites-entregues" className="mb-20">
+            <div className="max-w-2xl mb-10">
+              <span className="text-xs font-mono font-bold text-cyan-400 uppercase tracking-widest">
+                Projetos no ar
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-white mt-1">
+                Sites que já entregamos
+              </h2>
+              <p className="text-sm text-slate-400 mt-2 leading-relaxed">
+                Cada projeto foi desenhado sob medida para o negócio do cliente. Clique para visitar o site publicado.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {product.showcase.map((site) => (
+                <a
+                  key={site.url}
+                  href={site.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group rounded-2xl bg-[#0e1422] border border-slate-800 hover:border-cyan-700/60 overflow-hidden transition-colors flex flex-col"
+                >
+                  <div className="relative aspect-[16/10] overflow-hidden bg-slate-900">
+                    <img
+                      src={site.image}
+                      alt={`Página inicial do site ${site.name}`}
+                      loading="lazy"
+                      className="w-full h-full object-cover object-top group-hover:scale-[1.02] transition-transform duration-500"
+                    />
+                    <span className="absolute top-3 left-3 text-[10px] font-mono font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-slate-950/80 text-cyan-300 border border-cyan-900/60">
+                      {site.tag}
+                    </span>
+                  </div>
+                  <div className="p-6 flex-1 flex flex-col gap-3">
+                    <h3 className="text-lg font-bold text-white">{site.name}</h3>
+                    <p className="text-sm text-slate-400 leading-relaxed flex-1">{site.description}</p>
+                    <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-cyan-400 group-hover:text-cyan-300">
+                      Visitar site <ArrowUpRight className="w-4 h-4" />
+                    </span>
+                  </div>
+                </a>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* 2. PROBLEMA VS SOLUÇÃO */}
         <section id="problema-solucao" className="mb-20">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

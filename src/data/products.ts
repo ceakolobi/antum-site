@@ -734,6 +734,48 @@ export const productsData: Product[] = [
       'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?q=80&w=1000&auto=format&fit=crop',
     ],
     liveUrl: 'https://coisaetal.antum.com.br',
+    showcase: [
+      {
+        name: 'FrançaRH',
+        tag: 'Portal de RH',
+        description:
+          'Portal de recrutamento e seleção com área do candidato, portal da empresa e painel administrativo. Currículos, vagas, candidaturas com acompanhamento de etapas e site editável pela própria equipe.',
+        image: '/sites/francarh.jpg',
+        url: 'https://francarh.antum.com.br/',
+      },
+      {
+        name: 'Citrino Semijoias',
+        tag: 'Loja virtual',
+        description:
+          'Loja de semijoias finas com catálogo por categorias, sacola, área para revendedoras, painel de gestão próprio e atendimento por chat com consultora.',
+        image: '/sites/citrino.jpg',
+        url: 'https://citrinosemijoias.com.br/',
+      },
+      {
+        name: 'Coisa e Tal',
+        tag: 'Loja virtual',
+        description:
+          'Loja de produtos para o lar com catálogo, ofertas e dicas, com pedidos direto pelo WhatsApp. Publicada em menos de uma semana.',
+        image: '/sites/coisaetal.jpg',
+        url: 'https://coisaetal.antum.com.br/',
+      },
+      {
+        name: 'Harmony Clube',
+        tag: 'Institucional + CRM',
+        description:
+          'Site institucional de proteção veicular com cotação online, atendimento por IA e área do associado, integrado ao sistema de gestão.',
+        image: '/sites/harmony.jpg',
+        url: 'https://harmonyclube.com.br/',
+      },
+      {
+        name: 'Antum',
+        tag: 'Institucional',
+        description:
+          'O site da própria Antum: portfólio de soluções, laboratório, artigos e a Marina, agente de IA que atende e qualifica visitantes.',
+        image: '/sites/antum.jpg',
+        url: 'https://antum.com.br/',
+      },
+    ],
     problemBefore: {
       title: 'Sem um site profissional',
       points: [

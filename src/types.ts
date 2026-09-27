@@ -8,6 +8,14 @@ export type ProductCategory =
   | 'CRM' 
   | 'Integrações';
 
+export interface ShowcaseSite {
+  name: string;
+  tag: string;
+  description: string;
+  image: string;
+  url: string;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -21,6 +29,7 @@ export interface Product {
   heroImage: string;
   screenshots: string[];
   liveUrl?: string;
+  showcase?: ShowcaseSite[];
   problemBefore: {
     title: string;
     points: string[];

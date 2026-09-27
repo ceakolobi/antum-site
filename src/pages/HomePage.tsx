@@ -6,6 +6,7 @@ import { articlesData } from '../data/articles';
 import { labExperimentsData } from '../data/labProjects';
 import { EcosystemDiagram } from '../components/EcosystemDiagram';
 import { MicroHistory } from '../components/MicroHistory';
+import { SiteOfferBanner } from '../components/SiteOfferBanner';
 import { TechStackSection } from '../components/TechStackSection';
 import {
   Sparkles,
@@ -160,6 +161,9 @@ export const HomePage: React.FC = () => {
           </div>
         </div>
       </section>
+
+      {/* SITE PARA A SUA EMPRESA (banners de exemplo) */}
+      <SiteOfferBanner />
 
       {/* 5. MICRO-HISTÓRIA — "E SE..." */}
       <MicroHistory />

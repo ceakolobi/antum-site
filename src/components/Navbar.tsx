@@ -26,6 +26,7 @@ export const Navbar: React.FC = () => {
   const navLinks: { label: string; path: string; children?: { label: string; desc: string; path: string }[] }[] = [
     { label: 'INÍCIO', path: '/' },
     { label: 'SOLUÇÕES', path: '/solucoes' },
+    { label: 'COMO FUNCIONA', path: '/como-funciona' },
     {
       label: 'PORTFÓLIO',
       path: '/portfolio',

@@ -29,6 +29,7 @@ const steps = [
 const plans = [
   {
     name: 'Site',
+    ideal: 'Para aparecer bem no Google e receber contatos todos os dias.',
     price: 'R$ 70',
     per: '/mês',
     highlight: false,
@@ -43,6 +44,7 @@ const plans = [
   },
   {
     name: 'Site + Marina',
+    ideal: 'Para não perder cliente por demora na resposta, nem de madrugada.',
     price: 'R$ 99',
     per: '/mês',
     highlight: true,
@@ -56,13 +58,15 @@ const plans = [
   },
   {
     name: 'Loja virtual ou sistema (SaaS)',
+    ideal: 'Para quem vende pela internet ou precisa de um sistema próprio, com atendimento por IA.',
     price: 'R$ 180',
     per: '/mês',
     highlight: false,
     items: [
       'Criação e implantação completas, sem custo',
-      'Loja virtual ou sistema (SaaS) para o seu negócio',
-      'Marina, a SDR de IA, atendendo seus clientes',
+      'Loja virtual ou sistema (SaaS) sob medida para o seu negócio',
+      'Marina, a SDR de IA, atendendo e qualificando seus clientes 24 horas',
+      '1 atualização por semana',
     ],
     marina: 'Olá Marina! Quero saber mais sobre a loja virtual ou sistema com SDR por R$ 180/mês.',
     cta: 'Quero loja ou sistema',
@@ -152,6 +156,7 @@ export const HowItWorksPage: React.FC = () => {
                   <span className="text-4xl font-extrabold text-white">{p.price}</span>
                   <span className="text-sm text-slate-400">{p.per}</span>
                 </p>
+                <p className="mt-2 text-xs text-slate-400 leading-relaxed min-h-[2.5rem]">{p.ideal}</p>
                 <ul className="mt-5 space-y-2.5 flex-1">
                   {p.items.map((i) => (
                     <li key={i} className="flex items-start gap-2 text-sm text-slate-300">

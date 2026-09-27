@@ -4,13 +4,12 @@ import { Link } from '../router/Link';
 import { demoSites, DemoSite } from '../data/demoSites';
 import { ArrowRight, CheckCircle2, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 
-/** Mini-site de exemplo desenhado em CSS (empresa fictícia). */
+/** Mini-site de exemplo (empresa fictícia) com foto de fundo. */
 const DemoMockup: React.FC<{ site: DemoSite }> = ({ site }) => {
-  const text = site.dark ? '#F8FAFC' : '#0F172A';
-  const muted = site.dark ? '#94A3B8' : '#475569';
+  const initial = site.brand.charAt(0);
   return (
-    <div className="rounded-2xl overflow-hidden border border-slate-700 shadow-2xl shadow-black/50 bg-slate-900">
-      <div className="flex items-center gap-1.5 px-3 py-2 bg-slate-800/80 border-b border-slate-700">
+    <div className="relative rounded-2xl overflow-hidden border border-slate-700 shadow-2xl shadow-black/60 bg-slate-900">
+      <div className="flex items-center gap-1.5 px-3 py-2 bg-slate-800/90 border-b border-slate-700">
         <span className="w-2.5 h-2.5 rounded-full bg-red-400/80" />
         <span className="w-2.5 h-2.5 rounded-full bg-yellow-400/80" />
         <span className="w-2.5 h-2.5 rounded-full bg-green-400/80" />
@@ -18,42 +17,70 @@ const DemoMockup: React.FC<{ site: DemoSite }> = ({ site }) => {
           www.{site.brand.toLowerCase().replace(/[^a-z0-9]+/g, '')}.com.br
         </span>
       </div>
-      <div style={{ background: site.soft, color: text }} className="p-5 sm:p-6 min-h-[300px] flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-extrabold tracking-tight" style={{ color: site.accent }}>
+
+      {/* cabeçalho do site */}
+      <div className="flex items-center justify-between px-4 py-2.5" style={{ background: site.dark ? '#0B1220' : '#FFFFFF' }}>
+        <div className="flex items-center gap-2">
+          <span
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-extrabold text-white"
+            style={{ background: site.accent }}
+          >
+            {initial}
+          </span>
+          <span className="text-xs font-extrabold tracking-tight" style={{ color: site.dark ? '#F8FAFC' : '#0F172A' }}>
             {site.brand}
           </span>
-          <span className="hidden sm:flex gap-3 text-[10px]" style={{ color: muted }}>
-            <span>Início</span>
-            <span>Serviços</span>
-            <span>Contato</span>
-          </span>
         </div>
-        <div className="pt-2">
-          <h3 className="text-xl sm:text-2xl font-extrabold leading-tight max-w-[18ch]">{site.tagline}</h3>
+        <span className="hidden sm:flex gap-4 text-[10px] font-medium" style={{ color: site.dark ? '#94A3B8' : '#475569' }}>
+          <span>Início</span>
+          <span>Serviços</span>
+          <span>Sobre</span>
+          <span>Contato</span>
+        </span>
+      </div>
+
+      {/* hero com foto */}
+      <div className="relative h-[210px] sm:h-[240px]">
+        <img src={site.image} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(90deg, rgba(2,6,23,0.88) 0%, rgba(2,6,23,0.55) 55%, rgba(2,6,23,0.15) 100%)' }} />
+        <div className="relative h-full p-5 sm:p-6 flex flex-col justify-center gap-3 max-w-[78%]">
+          <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: site.accent }}>
+            {site.open}
+          </span>
+          <h3 className="text-lg sm:text-2xl font-extrabold leading-tight text-white">{site.tagline}</h3>
           <span
-            className="inline-block mt-3 px-4 py-2 rounded-lg text-xs font-bold text-white"
+            className="self-start px-4 py-2 rounded-lg text-[11px] font-bold text-white shadow-lg"
             style={{ background: site.accent }}
           >
             {site.cta}
           </span>
         </div>
-        <div className="grid grid-cols-2 gap-2 mt-auto">
-          {site.chips.map((c) => (
-            <div
-              key={c}
-              className="px-3 py-2 rounded-lg text-[11px] font-semibold border"
-              style={{
-                borderColor: `${site.accent}55`,
-                background: site.dark ? 'rgba(255,255,255,0.04)' : '#FFFFFF',
-                color: text,
-              }}
-            >
-              {c}
-            </div>
-          ))}
-        </div>
       </div>
+
+      {/* serviços */}
+      <div className="grid grid-cols-4 gap-2 p-3" style={{ background: site.dark ? '#0B1220' : '#F8FAFC' }}>
+        {site.chips.map((chip) => (
+          <div
+            key={chip}
+            className="rounded-lg px-2 py-2.5 text-center text-[10px] font-semibold leading-tight border"
+            style={{
+              borderColor: site.dark ? 'rgba(255,255,255,0.10)' : '#E2E8F0',
+              background: site.dark ? 'rgba(255,255,255,0.04)' : '#FFFFFF',
+              color: site.dark ? '#E2E8F0' : '#0F172A',
+            }}
+          >
+            <span className="block w-1.5 h-1.5 rounded-full mx-auto mb-1.5" style={{ background: site.accent }} />
+            {chip}
+          </div>
+        ))}
+      </div>
+
+      {/* ícone flutuante de WhatsApp */}
+      <span className="absolute bottom-3 right-3 w-9 h-9 rounded-full bg-[#25D366] shadow-lg shadow-black/40 flex items-center justify-center">
+        <svg viewBox="0 0 24 24" className="w-5 h-5 fill-white" aria-hidden="true">
+          <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91A9.85 9.85 0 0 0 12.04 2zm0 18.15h-.01a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.2 8.2 0 0 1-1.26-4.38c0-4.54 3.7-8.23 8.25-8.23 2.2 0 4.27.86 5.82 2.42a8.18 8.18 0 0 1 2.41 5.83c0 4.54-3.7 8.22-8.23 8.22zm4.52-6.16c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.12-.17.25-.64.81-.78.97-.14.17-.29.19-.54.06-.25-.12-1.05-.39-2-1.23-.74-.66-1.24-1.47-1.38-1.72-.15-.25-.02-.38.11-.5.11-.11.25-.29.37-.43.12-.15.17-.25.25-.41.08-.17.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.41-.42-.56-.42h-.48c-.17 0-.43.06-.66.31-.22.25-.87.85-.87 2.07 0 1.22.89 2.4 1.01 2.56.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.14-1.18-.06-.11-.22-.17-.47-.29z" />
+        </svg>
+      </span>
     </div>
   );
 };

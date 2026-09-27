@@ -9,6 +9,8 @@ export interface DemoSite {
   accent: string; // cor principal do exemplo
   soft: string; // cor de fundo suave do exemplo
   dark: boolean;
+  image: string; // foto de fundo (Unsplash, licença gratuita), arquivo em /public/demo
+  open: string; // linha de horário do exemplo
   chips: string[]; // itens exibidos no exemplo
   hook: string; // gancho de marketing (título do banner)
   pitch: string; // o que o site faz pelo negócio
@@ -26,6 +28,8 @@ export const demoSites: DemoSite[] = [
     accent: '#F59E0B',
     soft: '#1F2937',
     dark: true,
+    image: '/demo/oficina.jpg',
+    open: 'Aberto hoje até as 18h',
     chips: ['Revisão completa', 'Freios', 'Suspensão', 'Elétrica'],
     hook: 'Sua oficina cheia de clientes que já chegam com hora marcada.',
     pitch: 'O cliente encontra sua oficina no Google, vê os serviços e agenda pelo WhatsApp em um toque.',
@@ -41,6 +45,8 @@ export const demoSites: DemoSite[] = [
     accent: '#EC4899',
     soft: '#FDF2F8',
     dark: false,
+    image: '/demo/salao.jpg',
+    open: 'Agenda aberta esta semana',
     chips: ['Corte', 'Coloração', 'Manicure', 'Escova'],
     hook: 'Agenda cheia sem ficar respondendo mensagem o dia inteiro.',
     pitch: 'Um site bonito com serviços, valores e agenda, e a Marina tira as dúvidas das clientes enquanto você atende.',
@@ -56,6 +62,8 @@ export const demoSites: DemoSite[] = [
     accent: '#0F766E',
     soft: '#F0FDFA',
     dark: false,
+    image: '/demo/loja.jpg',
+    open: 'Entrega para toda a cidade',
     chips: ['Sala', 'Quarto', 'Cozinha', 'Ofertas'],
     hook: 'Sua loja aberta 24 horas, mesmo com a porta fechada.',
     pitch: 'Catálogo online com fotos e preços, e o pedido chega direto no seu WhatsApp, sem complicação.',
@@ -71,6 +79,8 @@ export const demoSites: DemoSite[] = [
     accent: '#2563EB',
     soft: '#EFF6FF',
     dark: false,
+    image: '/demo/clinica.jpg',
+    open: 'Atendimento de segunda a sábado',
     chips: ['Avaliação', 'Limpeza', 'Clareamento', 'Ortodontia'],
     hook: 'Pacientes que confiam em você antes mesmo da primeira consulta.',
     pitch: 'Um site que passa confiança, apresenta a equipe e os tratamentos, e facilita marcar a consulta.',
@@ -86,6 +96,8 @@ export const demoSites: DemoSite[] = [
     accent: '#DC2626',
     soft: '#111827',
     dark: true,
+    image: '/demo/restaurante.jpg',
+    open: 'Aberto todos os dias, a partir das 18h',
     chips: ['Hambúrgueres', 'Porções', 'Bebidas', 'Combos'],
     hook: 'Cardápio sempre atualizado e pedidos chegando direto para você.',
     pitch: 'Cardápio digital com fotos, combos do dia e botão de pedido pelo WhatsApp, sem pagar comissão de aplicativo.',

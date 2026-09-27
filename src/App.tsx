@@ -13,6 +13,7 @@ import { ArticleDetailPage } from './pages/ArticleDetailPage';
 import { AboutPage } from './pages/AboutPage';
 import { ContactPage } from './pages/ContactPage';
 import { LabPage } from './pages/LabPage';
+import { ClientsPage } from './pages/ClientsPage';
 import { Link } from './router/Link';
 import { ArrowLeft, Home, Sparkles } from 'lucide-react';
 
@@ -44,6 +45,8 @@ const RouteDispatcher: React.FC = () => {
       document.title = 'Sobre a ANTUM — Nossa História & Crença';
     } else if (currentPath === '/contato') {
       document.title = 'Contato Comercial & Briefing Técnico | ANTUM';
+    } else if (currentPath === '/clientes') {
+      document.title = 'Clientes | ANTUM';
     } else if (currentPath === '/lab') {
       document.title = 'ANTUM LAB — R&D, Protótipos & Experimentos de IA';
     }
@@ -89,6 +92,11 @@ const RouteDispatcher: React.FC = () => {
   // 6. Contact
   if (currentPath === '/contato') {
     return <ContactPage />;
+  }
+
+  // 6.1 Clientes
+  if (currentPath === '/clientes') {
+    return <ClientsPage />;
   }
 
   // 7. Lab

@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from '../router/RouterContext';
 import { Link } from '../router/Link';
-import { Menu, X, Sparkles, ArrowUpRight, Cpu } from 'lucide-react';
+import { Menu, X, Sparkles, ArrowUpRight, Cpu, ChevronDown } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
   const { currentPath, openMarinaModal } = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -19,18 +20,28 @@ export const Navbar: React.FC = () => {
   // Close mobile menu on route change
   useEffect(() => {
     setIsMobileMenuOpen(false);
+    setOpenMenu(null);
   }, [currentPath]);
 
-  const navLinks = [
+  const navLinks: { label: string; path: string; children?: { label: string; desc: string; path: string }[] }[] = [
     { label: 'INÍCIO', path: '/' },
     { label: 'SOLUÇÕES', path: '/solucoes' },
-    { label: 'PORTFÓLIO', path: '/portfolio' },
+    {
+      label: 'PORTFÓLIO',
+      path: '/portfolio',
+      children: [
+        { label: 'Produtos Antum', desc: 'Marina, RPA, CRM e mais', path: '/portfolio' },
+        { label: 'Sites & Landing Pages', desc: 'Sites que já entregamos', path: '/portfolio/sites-ia' },
+        { label: 'Clientes', desc: 'Quem trabalha com a ANTUM', path: '/clientes' },
+      ] as { label: string; desc: string; path: string }[],
+    },
     { label: 'SOBRE', path: '/sobre' },
     { label: 'CONTATO', path: '/contato' },
   ];
 
   const isActive = (path: string) => {
     if (path === '/' && currentPath === '/') return true;
+    if (path === '/portfolio' && currentPath === '/clientes') return true;
     if (path !== '/' && currentPath.startsWith(path)) return true;
     return false;
   };
@@ -67,17 +78,46 @@ export const Navbar: React.FC = () => {
         >
           {navLinks.map((link) => {
             const active = isActive(link.path);
+            const cls = `relative px-4 py-1.5 text-xs font-semibold tracking-wider transition-all duration-200 rounded-full whitespace-nowrap inline-flex items-center gap-1 ${
+              active
+                ? 'text-cyan-300 bg-cyan-950/60 border border-cyan-500/30 shadow-sm shadow-cyan-500/10'
+                : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+            }`;
+            if (link.children) {
+              return (
+                <div
+                  key={link.path}
+                  className="relative"
+                  onMouseEnter={() => setOpenMenu(link.path)}
+                  onMouseLeave={() => setOpenMenu(null)}
+                >
+                  <Link to={link.path} id={`nav-link-${link.label.toLowerCase()}`} className={cls}>
+                    {link.label}
+                    <ChevronDown className={`w-3 h-3 transition-transform ${openMenu === link.path ? 'rotate-180' : ''}`} />
+                  </Link>
+                  {openMenu === link.path && (
+                    <div className="absolute left-1/2 -translate-x-1/2 top-full pt-3 z-50">
+                      <div className="w-64 rounded-2xl bg-[#0e1422] border border-slate-800 shadow-xl shadow-black/50 p-2">
+                        {link.children.map((child) => (
+                          <Link
+                            key={child.path}
+                            to={child.path}
+                            className={`block px-3 py-2.5 rounded-xl hover:bg-slate-800/70 transition-colors ${
+                              currentPath === child.path ? 'bg-cyan-950/50' : ''
+                            }`}
+                          >
+                            <span className="block text-sm font-semibold text-white tracking-normal">{child.label}</span>
+                            <span className="block text-[11px] text-slate-500 tracking-normal mt-0.5">{child.desc}</span>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            }
             return (
-              <Link
-                key={link.path}
-                id={`nav-link-${link.label.toLowerCase()}`}
-                to={link.path}
-                className={`relative px-4 py-1.5 text-xs font-semibold tracking-wider transition-all duration-200 rounded-full whitespace-nowrap ${
-                  active
-                    ? 'text-cyan-300 bg-cyan-950/60 border border-cyan-500/30 shadow-sm shadow-cyan-500/10'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-                }`}
-              >
+              <Link key={link.path} id={`nav-link-${link.label.toLowerCase()}`} to={link.path} className={cls}>
                 {link.label}
               </Link>
             );
@@ -132,8 +172,8 @@ export const Navbar: React.FC = () => {
             {navLinks.map((link) => {
               const active = isActive(link.path);
               return (
+                <React.Fragment key={link.path}>
                 <Link
-                  key={link.path}
                   id={`mobile-nav-${link.label.toLowerCase()}`}
                   to={link.path}
                   className={`px-4 py-2.5 rounded-lg text-sm font-semibold tracking-wider flex items-center justify-between ${
@@ -145,6 +185,19 @@ export const Navbar: React.FC = () => {
                   <span>{link.label}</span>
                   {active && <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />}
                 </Link>
+              {link.children &&
+                link.children.map((child) => (
+                  <Link
+                    key={child.path}
+                    to={child.path}
+                    className={`ml-4 pl-4 py-2 border-l border-slate-800 text-sm ${
+                      currentPath === child.path ? 'text-cyan-300' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {child.label}
+                  </Link>
+                ))}
+                </React.Fragment>
               );
             })}
           </div>

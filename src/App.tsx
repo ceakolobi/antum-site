@@ -15,6 +15,9 @@ import { ContactPage } from './pages/ContactPage';
 import { LabPage } from './pages/LabPage';
 import { ClientsPage } from './pages/ClientsPage';
 import { HowItWorksPage } from './pages/HowItWorksPage';
+import { MarinaTeste } from './pages/MarinaTeste';
+import { TermosPage } from './pages/TermosPage';
+import { PrivacidadePage } from './pages/PrivacidadePage';
 import { Link } from './router/Link';
 import { ArrowLeft, Home, Sparkles } from 'lucide-react';
 
@@ -52,6 +55,12 @@ const RouteDispatcher: React.FC = () => {
       document.title = 'Clientes | ANTUM';
     } else if (currentPath === '/lab') {
       document.title = 'ANTUM LAB — R&D, Protótipos & Experimentos de IA';
+    } else if (currentPath === '/marina-teste') {
+      document.title = 'Marina SDR — 30 dias grátis | ANTUM';
+    } else if (currentPath === '/termos') {
+      document.title = 'Termos de Uso | ANTUM';
+    } else if (currentPath === '/privacidade') {
+      document.title = 'Política de Privacidade | ANTUM';
     }
   }, [currentPath]);
 
@@ -110,6 +119,21 @@ const RouteDispatcher: React.FC = () => {
   // 7. Lab
   if (currentPath === '/lab') {
     return <LabPage />;
+  }
+
+  // 8. Marina Teste (landing 30 dias grátis)
+  if (currentPath === '/marina-teste') {
+    return <MarinaTeste />;
+  }
+
+  // 9. Termos de Uso
+  if (currentPath === '/termos') {
+    return <TermosPage />;
+  }
+
+  // 10. Política de Privacidade
+  if (currentPath === '/privacidade') {
+    return <PrivacidadePage />;
   }
 
   // 404 Fallback Page

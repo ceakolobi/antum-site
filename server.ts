@@ -1,6 +1,5 @@
 import express from 'express';
 import path from 'path';
-import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -10,61 +9,21 @@ const PORT = parseInt(process.env.PORT || '3000', 10);
 
 app.use(express.json());
 
-// Lazy-initialized Gemini client
-let genAIClient: GoogleGenAI | null = null;
-function getGenAI(): GoogleGenAI | null {
-  if (!process.env.GEMINI_API_KEY) {
-    return null;
-  }
-  if (!genAIClient) {
-    genAIClient = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-  }
-  return genAIClient;
-}
-
-// Modelos candidatos, em ordem de preferencia. Se um estiver indisponivel
-// (aposentado, sem permissao na chave, etc) cai automaticamente pro proximo.
-const MODEL_CANDIDATES = [
-  'gemini-flash-latest', // apelido que acompanha a geracao mais nova — confirmado funcionando
-  'gemini-3.5-flash',
-  'gemini-3.5-flash-lite',
-  'gemini-2.5-flash',
-  'gemini-2.0-flash',
-];
-
-// Diagnostico da ultima chamada (sem expor segredos)
-let lastDiag: {
-  at: string | null;
-  workingModel: string | null;
-  lastError: string | null;
-  triedModels: string[];
-} = { at: null, workingModel: null, lastError: null, triedModels: [] };
-
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', studio: 'ANTUM AI & Automation' });
 });
 
-// Diagnostico do chat (sem vazar a chave)
+// Diagnostico do chat
 app.get('/api/diag', (req, res) => {
-  const key = process.env.GEMINI_API_KEY || '';
   res.json({
-    hasGeminiKey: key.length > 0,
-    keyLength: key.length,
-    candidates: MODEL_CANDIDATES,
-    lastCall: lastDiag,
+    mode: 'rule-based-sdr',
     lastLead,
     nodeEnv: process.env.NODE_ENV || null,
   });
 });
 
 // --- Captura de lead ---------------------------------------------------------
-// Antes isso ficava num array em memoria: todo lead sumia a cada restart.
-// Agora grava no Supabase (projeto "alma") via a funcao SECURITY DEFINER
-// submit_site_lead — a chave publishable NAO e secreta, e o anon so pode
-// inserir por essa funcao, nunca ler a tabela.
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://vlqfwdpgdqusugwebfwx.supabase.co';
 const SUPABASE_ANON_KEY =
   process.env.SUPABASE_ANON_KEY || 'sb_publishable_G9JhPOfn-rPV93AgBFM0ig_UNvAXiMf';
@@ -114,176 +73,51 @@ app.post('/api/lead', async (req, res) => {
   } catch (err: unknown) {
     const message = String((err as { message?: string })?.message ?? err);
     lastLead = { at: new Date().toISOString(), stored: false, error: message.slice(0, 400) };
-
-    // Se o banco falhar, o lead vai pro log do EasyPanel em vez de sumir.
     console.error('[LEAD NAO GRAVADO NO BANCO]', message, JSON.stringify(lead));
-
-    // O visitante nao paga pelo nosso erro: nao pedimos pra digitar de novo.
     return res.json({ success: true, leadId: null, message: 'Solicitação registrada com sucesso.' });
   }
 });
 
-const SYSTEM_INSTRUCTION = `Você é a Marina, assistente de vendas da Antum.
+// --- Marina SDR — motor de regras -------------------------------------------
+// Responde de forma útil sem depender de nenhuma chave de API externa.
+// Para plugar um LLM no futuro: adicionar a lógica aqui antes do fallback.
 
-COMO VOCÊ AGE:
-- Responde em no máximo 2-3 linhas por mensagem.
-- Fala como pessoa, não como bot. Sem bullet points, sem emojis em excesso.
-- Primeiro entende o problema do cliente. Só depois oferece solução.
-- Pergunta o essencial pra entender o que ele precisa — uma pergunta por vez.
-- Quando entender a dor, vai direto à melhor solução pra aquele caso específico.
-- Nunca repete o que já foi dito. Nunca enrola.
-
-COMO VOCÊ VENDE:
-- Não empurra produto. Conecta o produto à dor real que o cliente acabou de contar.
-- Antes de falar preço, mostra o valor.
-- Se houver objeção, valida com empatia, pergunta e redireciona — nunca discute.
-- O próximo passo é convidar pra conversa com a equipe: https://antum.com.br
-
-O QUE VOCÊ NUNCA FAZ:
-- Mandar textão. Máximo 3 linhas por mensagem.
-- Listar features sem antes entender o que o cliente precisa.
-- Fingir que não é IA — se perguntarem, confirma que é assistente de IA da Antum.
-
-OFERTA DE SITES (use quando o visitante falar de site ou disser o ramo da empresa dele):
-- A Antum cria o site da empresa e faz a implantação completa no começo, sem cobrar pela criação.
-- O cliente paga só a mensalidade: R$ 70 por mês pelo site (com 1 atualização por semana), ou R$ 99 por mês com a Marina junto, atendendo os clientes dele.
-- O registro do domínio (.com.br) é pago à parte, pelo cliente. O site fica pronto em até 7 dias depois de receber as informações e as fotos.
-- Exemplos de ramos: oficina, salão de beleza, loja, clínica, restaurante. Mais detalhes em https://antum.com.br/como-funciona
-
-COMO PROPOR UM SITE:
-- Quando ele disser o ramo, proponha UMA ideia concreta de site para aquele ramo (ex.: oficina = serviços, horário e agendamento pelo WhatsApp).
-- Fale do valor só depois de mostrar a ideia, e sempre mantendo as 2-3 linhas.
-- Depois pergunte o nome e o WhatsApp para a equipe enviar a proposta.
-- Nunca invente preço, prazo ou condição além dos que estão acima.
-
-IDENTIDADE: Marina, assistente da Antum — AI & Automation Studio (https://antum.com.br)`;
-
-type IncomingMessage = { sender?: string; role?: string; text?: string; content?: string };
-
-// Converte o historico do front no formato do Gemini.
-// A API exige que o PRIMEIRO item tenha role 'user' — as mensagens de abertura
-// da Marina sao descartadas do inicio do historico.
-function buildContents(messages: IncomingMessage[]) {
-  const mapped = (messages || [])
-    .map((m) => {
-      const text = (m.text ?? m.content ?? '').trim();
-      const isUser = m.sender === 'user' || m.role === 'user';
-      return { role: isUser ? 'user' : 'model', parts: [{ text }] };
-    })
-    .filter((m) => m.parts[0].text.length > 0);
-
-  // remove qualquer bloco 'model' no inicio
-  while (mapped.length > 0 && mapped[0].role === 'model') {
-    mapped.shift();
-  }
-  return mapped;
-}
-
-function isModelUnavailable(err: unknown): boolean {
-  const msg = String((err as { message?: string })?.message ?? err ?? '');
-  return /404|NOT_FOUND|not found|is not supported|deprecated|PERMISSION_DENIED|403/i.test(msg);
-}
-
-function isTransient(err: unknown): boolean {
-  const msg = String((err as { message?: string })?.message ?? err ?? '');
-  return /429|500|502|503|504|UNAVAILABLE|overloaded|RESOURCE_EXHAUSTED|timeout|ECONN/i.test(msg);
-}
-
-// Marina SDR AI Chat endpoint
-app.post('/api/chat-marina', async (req, res) => {
+app.post('/api/chat-marina', (req, res) => {
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
 
   const { messages } = req.body || {};
-  const lastUserMessage =
+  const lastUserMessage: string =
     messages && messages.length > 0
-      ? messages[messages.length - 1].text || messages[messages.length - 1].content || ''
+      ? (messages[messages.length - 1].text || messages[messages.length - 1].content || '').trim()
       : '';
 
-  const ai = getGenAI();
-
-  if (ai) {
-    const contents = buildContents(messages);
-    const tried: string[] = [];
-    let lastErr: unknown = null;
-
-    if (contents.length === 0) {
-      contents.push({ role: 'user', parts: [{ text: lastUserMessage || 'Olá' }] });
-    }
-
-    for (const model of MODEL_CANDIDATES) {
-      tried.push(model);
-      // ate 3 tentativas por modelo, so pra erros transitorios (503/429)
-      for (let attempt = 0; attempt < 3; attempt++) {
-        try {
-          const response = await ai.models.generateContent({
-            model,
-            contents,
-            config: { systemInstruction: SYSTEM_INSTRUCTION, temperature: 0.7 },
-          });
-
-          const replyText =
-            (response?.text || '').trim() ||
-            'Entendi seu ponto. Como sua equipe lida com esse fluxo atualmente?';
-
-          lastDiag = {
-            at: new Date().toISOString(),
-            workingModel: model,
-            lastError: null,
-            triedModels: tried,
-          };
-          return res.json({ reply: replyText, model });
-        } catch (err: unknown) {
-          lastErr = err;
-          if (isModelUnavailable(err)) break; // modelo nao serve — proximo candidato
-          if (!isTransient(err)) break; // erro real (payload, chave) — proximo candidato
-          if (attempt === 2) break;
-          await sleep(1200 * (attempt + 1));
-        }
-      }
-    }
-
-    // Todos os modelos falharam — registra e cai no motor de regras (200, nao 500)
-    lastDiag = {
-      at: new Date().toISOString(),
-      workingModel: null,
-      lastError: String((lastErr as { message?: string })?.message ?? lastErr ?? 'erro desconhecido').slice(0, 400),
-      triedModels: tried,
-    };
-    console.error('[chat-marina] todos os modelos falharam:', lastDiag.lastError);
-  } else {
-    lastDiag = {
-      at: new Date().toISOString(),
-      workingModel: null,
-      lastError: 'GEMINI_API_KEY ausente no ambiente',
-      triedModels: [],
-    };
-  }
-
-  // Motor SDR de regras (fallback) — responde util mesmo sem IA
-  const lower = (lastUserMessage || '').toLowerCase();
-  let fallbackReply: string;
+  const lower = lastUserMessage.toLowerCase();
+  let reply: string;
 
   if (/\b(ol[áa]|oi|bom dia|boa tarde|boa noite)\b/.test(lower)) {
-    fallbackReply =
+    reply =
       'Olá! Sou a Marina, assistente de IA da Antum. Me conta rapidinho: qual processo hoje mais consome tempo da sua equipe?';
   } else if (/(lead|venda|sdr|comercial|prospec|whatsapp|atendimento)/.test(lower)) {
-    fallbackReply =
+    reply =
       'Um agente de IA qualifica seus leads no WhatsApp em segundos e entrega a oportunidade pronta pro vendedor. Hoje quem faz esse primeiro atendimento aí?';
   } else if (/(rpa|repetit|manual|planilha|tempo|processo)/.test(lower)) {
-    fallbackReply =
+    reply =
       'Rotinas manuais tipo digitação, conciliação em ERP e cópia de planilha são o caso perfeito pra automação. Quantas horas por semana isso toma da equipe?';
   } else if (/(pre[çc]o|quanto custa|valor|or[çc]amento|plano)/.test(lower)) {
-    fallbackReply =
-      'Depende do fluxo e das integrações, então prefiro te passar um número real e não um chute. Me diz o que você quer automatizar primeiro?';
+    reply =
+      'Depende do fluxo e das integrações, então prefiro te passar um número real. Me diz o que você quer automatizar primeiro?';
   } else if (/(integra|sistema|api|erp|crm)/.test(lower)) {
-    fallbackReply =
+    reply =
       'A gente conecta a IA nos sistemas que você já usa: CRM, ERP, banco de dados, WhatsApp e APIs legadas, sem trocar seu stack. Quais ferramentas você quer integrar?';
+  } else if (/(site|loja|landing|página)/.test(lower)) {
+    reply =
+      'A Antum cria e hospeda o site da sua empresa por R$ 70/mês — inclui 1 atualização por semana e fica pronto em até 7 dias. Qual é o ramo da empresa?';
   } else {
-    fallbackReply =
+    reply =
       'Entendi. Esse é exatamente o tipo de rotina que a gente transforma em sistema que roda sozinho. Me conta um pouco mais de como funciona hoje?';
   }
 
-  return res.json({ reply: fallbackReply, model: 'fallback' });
+  return res.json({ reply, model: 'sdr-rules' });
 });
 
 // Vite / Static setup

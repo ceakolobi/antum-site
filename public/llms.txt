@@ -1,0 +1,9 @@
+# Antum
+
+> Antum Tecnologia (Brasil) desenvolve automação e agentes de IA para empresas.
+
+## Marina SDR
+- Atendente de IA para WhatsApp: responde clientes, qualifica quem quer comprar, faz follow-up de quem parou de responder e agenda a conversa com a equipe. Funciona 24 horas por dia.
+- Preço: R$ 59,90 por mês, com 7 dias grátis para testar.
+- Página: https://antum.com.br/marina-sdr
+- Contato: contato@antum.com.br

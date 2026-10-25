@@ -56,7 +56,7 @@ const RouteDispatcher: React.FC = () => {
     } else if (currentPath === '/lab') {
       document.title = 'ANTUM LAB — R&D, Protótipos & Experimentos de IA';
     } else if (currentPath === '/marina-teste') {
-      document.title = 'Marina SDR — 30 dias grátis | ANTUM';
+      document.title = 'Marina SDR — 7 dias grátis | ANTUM';
     } else if (currentPath === '/termos') {
       document.title = 'Termos de Uso | ANTUM';
     } else if (currentPath === '/privacidade') {

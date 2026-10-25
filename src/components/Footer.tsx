@@ -46,6 +46,11 @@ export const Footer: React.FC = () => {
                 </Link>
               </li>
               <li>
+                <a href="/marina-sdr" className="hover:text-cyan-400 transition-colors">
+                  Marina SDR — teste 7 dias grátis
+                </a>
+              </li>
+              <li>
                 <Link to="/portfolio/harmony" className="hover:text-cyan-400 transition-colors">
                   Harmony (CRM Proteção Veicular)
                 </Link>

@@ -112,7 +112,8 @@ p { max-width: 62ch; text-wrap: pretty; }
 .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; margin-right: auto; }
 .brand img { border-radius: 50%; }
 .brand__name { font-family: var(--display); font-weight: 750; font-size: 1.2rem; letter-spacing: -0.02em; }
-.brand__by { font-size: 0.85rem; color: var(--on-night-dim); padding-left: 10px; border-left: 1px solid var(--line-night); }
+.brand .brand__by img { height: 30px; width: auto; border-radius: 0; display: block; }
+.brand__by { display: flex; align-items: center; font-size: 0.85rem; color: var(--on-night-dim); padding-left: 10px; border-left: 1px solid var(--line-night); }
 .nav { display: none; gap: 26px; }
 .nav a { text-decoration: none; font-weight: 500; font-size: 0.97rem; color: var(--on-night-dim); }
 .nav a:hover { color: #fff; }
@@ -324,8 +325,9 @@ p { max-width: 62ch; text-wrap: pretty; }
 /* rodapé */
 .foot { background: var(--midnight); padding-block: 40px 96px; color: var(--on-night-dim); font-size: 0.93rem; }
 .foot__in { display: grid; gap: 14px; }
-.foot__brand { font-family: var(--display); font-weight: 700; font-size: 1.1rem; color: var(--on-night); }
-.foot__brand span { font-family: var(--body); font-weight: 400; font-size: 0.93rem; color: var(--on-night-dim); }
+.foot__brand { display: grid; gap: 10px; }
+.foot__logo img { height: 44px; width: auto; display: block; }
+.foot__brand p { font-size: 0.93rem; color: var(--on-night-dim); margin: 0; }
 .foot__nav { display: flex; flex-wrap: wrap; gap: 8px 24px; }
 .foot a { text-underline-offset: 4px; }
 .foot a:hover { color: #fff; }
@@ -367,3 +369,6 @@ p { max-width: 62ch; text-wrap: pretty; }
   html { scroll-behavior: auto; }
   * { animation: none !important; transition: none !important; }
 }
+
+.formcard__note { margin: 14px 0 0; font-size: 0.88rem; color: var(--ink-dim); }
+@media (min-width: 900px) { .formcard { position: sticky; top: 96px; align-self: start; } }

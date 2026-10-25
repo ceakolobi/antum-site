@@ -40,3 +40,8 @@ Ambiente de teste: servidor de produção local (NODE_ENV=production, porta 4173
 - Headers e redirect HTTP->HTTPS em produção (só após deploy; Cloudflare pode adicionar/alterar).
 - Gitleaks/semgrep não instalados no PC; substituídos por git grep + revisão manual.
 - Teste de restauração de backup do Supabase (sem acesso).
+
+## Atualização 2026-10-25
+- Decisão do Eduardo: a landing não coleta mais dados. Todos os botões levam a https://sdr.antum.com.br/ (cadastro e teste no painel). Formulário e endpoint POST /api/marina-trial REMOVIDOS (superfície de ataque menor; achados M-01 e B-01 deixam de se aplicar à landing).
+- Links de cadastro recebem UTM (utm_source=landing, utm_medium=marina-sdr + campanha real, se houver).
+- NOTA: sdr.antum.com.br exibe '500+ empresas atendidas' e '4,8 estrelas' sem comprovação visível; revisar (risco de propaganda enganosa).

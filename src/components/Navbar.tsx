@@ -38,6 +38,7 @@ export const Navbar: React.FC = () => {
     },
     { label: 'SOBRE', path: '/sobre' },
     { label: 'CONTATO', path: '/contato' },
+    { label: 'ÁREA DO CLIENTE', path: '/area-do-cliente' },
   ];
 
   const isActive = (path: string) => {

@@ -19,6 +19,7 @@ import { MarinaTeste } from './pages/MarinaTeste';
 import { TermosPage } from './pages/TermosPage';
 import { PrivacidadePage } from './pages/PrivacidadePage';
 import { CadastroPage } from './pages/CadastroPage';
+import { AreaClientePage } from './pages/AreaClientePage';
 import { Link } from './router/Link';
 import { ArrowLeft, Home, Sparkles } from 'lucide-react';
 
@@ -62,6 +63,8 @@ const RouteDispatcher: React.FC = () => {
       document.title = 'Termos de Uso | ANTUM';
     } else if (currentPath === '/privacidade') {
       document.title = 'Política de Privacidade | ANTUM';
+    } else if (currentPath === '/area-do-cliente') {
+      document.title = 'Área do cliente | ANTUM';
     }
   }, [currentPath]);
 
@@ -135,6 +138,11 @@ const RouteDispatcher: React.FC = () => {
   // 10. Política de Privacidade
   if (currentPath === '/privacidade') {
     return <PrivacidadePage />;
+  }
+
+  // 10.1 Área do cliente (porta de entrada: cadastro e, em breve, Minha Conta)
+  if (currentPath === '/area-do-cliente') {
+    return <AreaClientePage />;
   }
 
   // 11. Cadastro financeiro (público Marina SDR ou por convite)

@@ -1,7 +1,9 @@
 -- Módulo financeiro Antum + Asaas — migração 001
--- Todas as tabelas com RLS ligado e SEM políticas: só o backend (service_role) acessa.
+-- Schema próprio 'financeiro' (fora da API pública do Supabase). Acesso só pelo papel antum_fin.
+create schema if not exists financeiro;
 
-create table if not exists public.fin_planos (
+
+create table if not exists financeiro.planos (
   slug text primary key,
   nome text not null,
   valor numeric(10,2) not null check (valor > 0),
@@ -10,11 +12,11 @@ create table if not exists public.fin_planos (
   ativo boolean not null default true,
   created_at timestamptz not null default now()
 );
-insert into public.fin_planos (slug, nome, valor, automatico)
+insert into financeiro.planos (slug, nome, valor, automatico)
 values ('marina-sdr', 'Marina SDR', 59.90, true)
 on conflict (slug) do nothing;
 
-create table if not exists public.fin_convites (
+create table if not exists financeiro.convites (
   id uuid primary key default gen_random_uuid(),
   token_hash text not null unique,
   plano_nome text not null,
@@ -28,7 +30,7 @@ create table if not exists public.fin_convites (
   created_at timestamptz not null default now()
 );
 
-create table if not exists public.fin_clientes (
+create table if not exists financeiro.clientes (
   id uuid primary key default gen_random_uuid(),
   tipo text not null check (tipo in ('PF','PJ')),
   nome text not null,
@@ -55,11 +57,11 @@ create table if not exists public.fin_clientes (
   updated_at timestamptz not null default now()
 );
 
-create table if not exists public.fin_assinaturas (
+create table if not exists financeiro.assinaturas (
   id uuid primary key default gen_random_uuid(),
-  cliente_id uuid not null references public.fin_clientes(id),
-  convite_id uuid references public.fin_convites(id),
-  plano_slug text references public.fin_planos(slug),
+  cliente_id uuid not null references financeiro.clientes(id),
+  convite_id uuid references financeiro.convites(id),
+  plano_slug text references financeiro.planos(slug),
   plano_nome text not null,
   valor numeric(10,2) not null,
   vencimento_dia int not null,
@@ -72,11 +74,11 @@ create table if not exists public.fin_assinaturas (
   updated_at timestamptz not null default now()
 );
 
-create table if not exists public.fin_cobrancas (
+create table if not exists financeiro.cobrancas (
   id uuid primary key default gen_random_uuid(),
   asaas_payment_id text not null unique,
-  assinatura_id uuid references public.fin_assinaturas(id),
-  cliente_id uuid references public.fin_clientes(id),
+  assinatura_id uuid references financeiro.assinaturas(id),
+  cliente_id uuid references financeiro.clientes(id),
   valor numeric(10,2) not null,
   valor_original numeric(10,2),
   multa_aplicada numeric(10,2) not null default 0,
@@ -91,7 +93,7 @@ create table if not exists public.fin_cobrancas (
   updated_at timestamptz not null default now()
 );
 
-create table if not exists public.fin_eventos (
+create table if not exists financeiro.eventos (
   asaas_event_id text primary key,
   evento text not null,
   payload jsonb not null,
@@ -100,9 +102,9 @@ create table if not exists public.fin_eventos (
   resultado text
 );
 
-create table if not exists public.fin_emails (
+create table if not exists financeiro.emails (
   id uuid primary key default gen_random_uuid(),
-  cliente_id uuid references public.fin_clientes(id),
+  cliente_id uuid references financeiro.clientes(id),
   tipo text not null,
   destinatario text not null,
   status text not null default 'PENDENTE' check (status in ('PENDENTE','ENVIADO','FALHA')),
@@ -112,10 +114,27 @@ create table if not exists public.fin_emails (
   enviado_em timestamptz
 );
 
-alter table public.fin_planos enable row level security;
-alter table public.fin_convites enable row level security;
-alter table public.fin_clientes enable row level security;
-alter table public.fin_assinaturas enable row level security;
-alter table public.fin_cobrancas enable row level security;
-alter table public.fin_eventos enable row level security;
-alter table public.fin_emails enable row level security;
+alter table financeiro.planos enable row level security;
+alter table financeiro.convites enable row level security;
+alter table financeiro.clientes enable row level security;
+alter table financeiro.assinaturas enable row level security;
+alter table financeiro.cobrancas enable row level security;
+alter table financeiro.eventos enable row level security;
+alter table financeiro.emails enable row level security;
+
+-- Papel restrito do servidor do site (a senha é definida fora do git, no painel)
+do $$ begin
+  if not exists (select 1 from pg_roles where rolname = 'antum_fin') then
+    create role antum_fin login noinherit nobypassrls nosuperuser nocreatedb nocreaterole;
+  end if;
+end $$;
+grant usage on schema financeiro to antum_fin;
+grant select, insert, update on all tables in schema financeiro to antum_fin;
+alter default privileges in schema financeiro grant select, insert, update on tables to antum_fin;
+revoke all on schema public from antum_fin;
+do $$ declare t text; begin
+  for t in select tablename from pg_tables where schemaname = 'financeiro' loop
+    execute format('drop policy if exists antum_fin_all on financeiro.%I', t);
+    execute format('create policy antum_fin_all on financeiro.%I for all to antum_fin using (true) with check (true)', t);
+  end loop;
+end $$;

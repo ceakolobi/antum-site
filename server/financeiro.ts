@@ -2,11 +2,12 @@
 // Toda chamada ao Asaas e ao banco acontece AQUI, no servidor. Nada de chave no frontend.
 import type { Express, Request, Response, NextFunction } from 'express';
 import crypto from 'crypto';
+import pg from 'pg';
 
 const env = (k: string) => (process.env[k] || '').trim();
 
-const SUPABASE_URL = () => env('SUPABASE_URL') || 'https://vlqfwdpgdqusugwebfwx.supabase.co';
-const SUPABASE_SERVICE_KEY = () => env('SUPABASE_SERVICE_KEY');
+// Conexão direta com papel restrito (antum_fin): só enxerga o schema "financeiro".
+const FIN_DATABASE_URL = () => env('FIN_DATABASE_URL');
 const ASAAS_KEY = () => env('ASAAS_API_KEY');
 // Padrão = SANDBOX. Produção só com ASAAS_BASE_URL=https://api.asaas.com/v3 explícito.
 const ASAAS_BASE = () => env('ASAAS_BASE_URL') || 'https://api-sandbox.asaas.com/v3';
@@ -18,7 +19,7 @@ const CONTRATO_VERSAO = 'contrato-v1-2026-10';
 const MULTA_FIXA = 5.22;
 const GRUPO_ASAAS = 'Sistemas';
 
-const configurado = () => Boolean(SUPABASE_SERVICE_KEY() && ASAAS_KEY());
+const configurado = () => Boolean(FIN_DATABASE_URL() && ASAAS_KEY());
 
 // ---------- utilitários -------------------------------------------------------
 const onlyDigits = (s: unknown) => String(s ?? '').replace(/\D/g, '');
@@ -68,20 +69,20 @@ export function proximoVencimento(dia: number, hoje: Date = hojeSP()): string {
 }
 
 // ---------- clientes HTTP -----------------------------------------------------
-async function sb<T = any>(method: string, path: string, body?: unknown, prefer = 'return=representation'): Promise<T> {
-  const r = await fetch(`${SUPABASE_URL()}/rest/v1/${path}`, {
-    method,
-    headers: {
-      apikey: SUPABASE_SERVICE_KEY(),
-      Authorization: `Bearer ${SUPABASE_SERVICE_KEY()}`,
-      'Content-Type': 'application/json',
-      Prefer: prefer,
-    },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  const text = await r.text();
-  if (!r.ok) throw new Error(`db ${r.status}: ${text.slice(0, 300)}`);
-  return (text ? JSON.parse(text) : null) as T;
+let pool: pg.Pool | null = null;
+async function db<T = any>(text: string, params: unknown[] = []): Promise<T[]> {
+  if (!pool) {
+    pool = new pg.Pool({
+      connectionString: FIN_DATABASE_URL(),
+      ssl: { rejectUnauthorized: false },
+      max: 5,
+      idleTimeoutMillis: 20_000,
+      connectionTimeoutMillis: 8_000,
+    });
+    pool.on('error', (e) => console.error('[fin/pool]', e.message));
+  }
+  const r = await pool.query(text, params as any[]);
+  return r.rows as T[];
 }
 
 async function asaas<T = any>(method: string, path: string, body?: unknown): Promise<T> {
@@ -157,7 +158,7 @@ interface PlanoResolvido {
 async function resolverPlano(token: string | undefined): Promise<PlanoResolvido | { erro: string; status: number }> {
   if (token) {
     if (!/^[A-Za-z0-9_-]{32,64}$/.test(token)) return { erro: 'convite_invalido', status: 404 };
-    const rows = await sb<any[]>('GET', `fin_convites?token_hash=eq.${sha256(token)}&select=*`);
+    const rows = await db('select * from financeiro.convites where token_hash = $1', [sha256(token)]);
     const c = rows[0];
     if (!c) return { erro: 'convite_invalido', status: 404 };
     if (c.concluido_em) return { erro: 'convite_ja_utilizado', status: 409 };
@@ -173,7 +174,7 @@ async function resolverPlano(token: string | undefined): Promise<PlanoResolvido 
       vinculado: c.cpf_cnpj_vinculado,
     };
   }
-  const rows = await sb<any[]>('GET', 'fin_planos?slug=eq.marina-sdr&automatico=eq.true&ativo=eq.true&select=*');
+  const rows = await db("select * from financeiro.planos where slug = 'marina-sdr' and automatico and ativo");
   const p = rows[0];
   if (!p) return { erro: 'plano_indisponivel', status: 503 };
   return {
@@ -230,27 +231,28 @@ function validar(b: any, plano: PlanoResolvido) {
 // ---------- fluxo principal ---------------------------------------------------
 async function processarCadastro(req: Request, plano: PlanoResolvido, d: ReturnType<typeof validar>['dados']) {
   // 1) Cliente local (único por CPF/CNPJ) + registro do aceite
-  const existentes = await sb<any[]>('GET', `fin_clientes?cpf_cnpj=eq.${d.doc}&select=*`);
-  let cliente = existentes[0];
+  let cliente: any;
   if (plano.vinculado && plano.vinculado !== d.doc) throw Object.assign(new Error('convite_de_outro_cliente'), { status: 409 });
 
-  const campos = {
-    tipo: d.tipo, nome: d.nome, email: d.email, celular: d.celular, telefone: d.telefone || null,
-    cep: d.cep, endereco: d.endereco, numero: d.numero, complemento: d.complemento || null,
-    bairro: d.bairro, cidade: d.cidade, uf: d.uf,
-    aceite_em: new Date().toISOString(), aceite_ip: ipDe(req),
-    aceite_user_agent: str(req.headers['user-agent'], 300), aceite_versao: CONTRATO_VERSAO,
-    updated_at: new Date().toISOString(),
-  };
-  if (cliente) {
-    [cliente] = await sb<any[]>('PATCH', `fin_clientes?id=eq.${cliente.id}`, campos);
-  } else {
-    [cliente] = await sb<any[]>('POST', 'fin_clientes', { ...campos, cpf_cnpj: d.doc });
-  }
+  [cliente] = await db(
+    `insert into financeiro.clientes
+       (tipo, nome, cpf_cnpj, email, celular, telefone, cep, endereco, numero, complemento,
+        bairro, cidade, uf, aceite_em, aceite_ip, aceite_user_agent, aceite_versao)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13, now(), $14,$15,$16)
+     on conflict (cpf_cnpj) do update set
+       tipo=excluded.tipo, nome=excluded.nome, email=excluded.email, celular=excluded.celular,
+       telefone=excluded.telefone, cep=excluded.cep, endereco=excluded.endereco, numero=excluded.numero,
+       complemento=excluded.complemento, bairro=excluded.bairro, cidade=excluded.cidade, uf=excluded.uf,
+       aceite_em=excluded.aceite_em, aceite_ip=excluded.aceite_ip,
+       aceite_user_agent=excluded.aceite_user_agent, aceite_versao=excluded.aceite_versao, updated_at=now()
+     returning *`,
+    [d.tipo, d.nome, d.doc, d.email, d.celular, d.telefone || null, d.cep, d.endereco, d.numero,
+     d.complemento || null, d.bairro, d.cidade, d.uf, ipDe(req), str(req.headers['user-agent'], 300), CONTRATO_VERSAO],
+  );
 
   // Vincula o convite a este CPF/CNPJ (só o primeiro que usar consegue)
   if (plano.conviteId && !plano.vinculado) {
-    const v = await sb<any[]>('PATCH', `fin_convites?id=eq.${plano.conviteId}&cpf_cnpj_vinculado=is.null`, { cpf_cnpj_vinculado: d.doc });
+    const v = await db('update financeiro.convites set cpf_cnpj_vinculado = $2 where id = $1 and cpf_cnpj_vinculado is null returning id', [plano.conviteId, d.doc]);
     if (!v.length) throw Object.assign(new Error('convite_de_outro_cliente'), { status: 409 });
   }
 
@@ -265,19 +267,25 @@ async function processarCadastro(req: Request, plano: PlanoResolvido, d: ReturnT
       externalReference: cliente.id, groupName: GRUPO_ASAAS, notificationDisabled: true,
     };
     if (!cus) cus = await asaas<any>('POST', '/customers', payload);
-    [cliente] = await sb<any[]>('PATCH', `fin_clientes?id=eq.${cliente.id}`, { asaas_customer_id: cus.id });
+    [cliente] = await db('update financeiro.clientes set asaas_customer_id = $2, updated_at = now() where id = $1 returning *', [cliente.id, cus.id]);
   }
 
   // 3) Assinatura (uma por cliente + plano/convite; reaproveita em nova tentativa)
-  const filtroAss = plano.conviteId
-    ? `convite_id=eq.${plano.conviteId}`
-    : `plano_slug=eq.${plano.planoSlug}`;
-  let ass = (await sb<any[]>('GET', `fin_assinaturas?cliente_id=eq.${cliente.id}&${filtroAss}&status=neq.CANCELADA&select=*`))[0];
+  let ass: any = (
+    await db(
+      plano.conviteId
+        ? "select * from financeiro.assinaturas where cliente_id = $1 and convite_id = $2 and status <> 'CANCELADA'"
+        : "select * from financeiro.assinaturas where cliente_id = $1 and plano_slug = $2 and status <> 'CANCELADA'",
+      [cliente.id, plano.conviteId ?? plano.planoSlug],
+    )
+  )[0];
   if (!ass) {
-    [ass] = await sb<any[]>('POST', 'fin_assinaturas', {
-      cliente_id: cliente.id, convite_id: plano.conviteId, plano_slug: plano.planoSlug,
-      plano_nome: plano.planoNome, valor: plano.valor, vencimento_dia: d.dia, forma_pagamento: d.forma,
-    });
+    [ass] = await db(
+      `insert into financeiro.assinaturas
+         (cliente_id, convite_id, plano_slug, plano_nome, valor, vencimento_dia, forma_pagamento)
+       values ($1,$2,$3,$4,$5,$6,$7) returning *`,
+      [cliente.id, plano.conviteId, plano.planoSlug, plano.planoNome, plano.valor, d.dia, d.forma],
+    );
   }
   if (!ass.asaas_subscription_id) {
     // Se uma tentativa anterior criou no Asaas mas não gravou aqui, recupera pelo externalReference
@@ -295,9 +303,10 @@ async function processarCadastro(req: Request, plano: PlanoResolvido, d: ReturnT
         fine: { value: MULTA_FIXA, type: 'FIXED' },
       });
     }
-    [ass] = await sb<any[]>('PATCH', `fin_assinaturas?id=eq.${ass.id}`, {
-      asaas_subscription_id: sub.id, status: 'ATIVA', ultimo_erro: null, updated_at: new Date().toISOString(),
-    });
+    [ass] = await db(
+      "update financeiro.assinaturas set asaas_subscription_id = $2, status = 'ATIVA', ultimo_erro = null, updated_at = now() where id = $1 returning *",
+      [ass.id, sub.id],
+    );
   }
 
   // 4) Primeira cobrança (link de pagamento)
@@ -309,9 +318,9 @@ async function processarCadastro(req: Request, plano: PlanoResolvido, d: ReturnT
     if (p) { pagamentoUrl = p.invoiceUrl || p.bankSlipUrl || null; vencimento = p.dueDate; }
   } catch { /* cobrança ainda não materializada: o webhook completa depois */ }
 
-  await sb('PATCH', `fin_clientes?id=eq.${cliente.id}`, { status_cadastro: 'CONCLUIDO', ultimo_erro: null });
+  await db("update financeiro.clientes set status_cadastro = 'CONCLUIDO', ultimo_erro = null, updated_at = now() where id = $1", [cliente.id]);
   if (plano.conviteId) {
-    await sb('PATCH', `fin_convites?id=eq.${plano.conviteId}`, { concluido_em: new Date().toISOString() });
+    await db('update financeiro.convites set concluido_em = now() where id = $1', [plano.conviteId]);
   }
 
   return {
@@ -327,33 +336,45 @@ async function aplicarEventoPagamento(ev: any) {
   const p = ev.payment;
   if (!p?.id) return 'sem_pagamento';
   const quando = ev.dateCreated ? new Date(ev.dateCreated).toISOString() : new Date().toISOString();
-  const atual = (await sb<any[]>('GET', `fin_cobrancas?asaas_payment_id=eq.${p.id}&select=*`))[0];
-  if (atual?.ultimo_evento_em && new Date(atual.ultimo_evento_em) > new Date(quando)) return 'ignorado_fora_de_ordem';
 
   let assinaturaId: string | null = null;
   let clienteId: string | null = null;
   if (p.subscription) {
-    const a = (await sb<any[]>('GET', `fin_assinaturas?asaas_subscription_id=eq.${p.subscription}&select=id,cliente_id`))[0];
+    const a = (await db('select id, cliente_id from financeiro.assinaturas where asaas_subscription_id = $1', [p.subscription]))[0];
     assinaturaId = a?.id ?? null; clienteId = a?.cliente_id ?? null;
   }
   if (!clienteId && p.customer) {
-    const c = (await sb<any[]>('GET', `fin_clientes?asaas_customer_id=eq.${p.customer}&select=id`))[0];
+    const c = (await db('select id from financeiro.clientes where asaas_customer_id = $1', [p.customer]))[0];
     clienteId = c?.id ?? null;
   }
   const original = p.originalValue != null ? Number(p.originalValue) : null;
   const pago = PAGOS.has(String(p.status));
   const multa = pago && original != null ? Math.max(0, Math.round((Number(p.value) - original) * 100) / 100) : 0;
-  const linha = {
-    asaas_payment_id: p.id, assinatura_id: assinaturaId, cliente_id: clienteId,
-    valor: Number(p.value), valor_original: original, multa_aplicada: multa,
-    vencimento: p.dueDate, status: String(p.status), forma_pagamento: p.billingType ?? null,
-    invoice_url: p.invoiceUrl ?? null, boleto_url: p.bankSlipUrl ?? null,
-    pago_em: pago ? (p.confirmedDate || p.paymentDate || quando) : null,
-    ultimo_evento_em: quando, updated_at: new Date().toISOString(),
-  };
-  if (atual) await sb('PATCH', `fin_cobrancas?id=eq.${atual.id}`, linha);
-  else await sb('POST', 'fin_cobrancas', linha);
-  return 'aplicado';
+
+  // Upsert atômico: evento mais antigo que o já gravado NÃO sobrescreve (fora de ordem)
+  const r = await db(
+    `insert into financeiro.cobrancas
+       (asaas_payment_id, assinatura_id, cliente_id, valor, valor_original, multa_aplicada, vencimento,
+        status, forma_pagamento, invoice_url, boleto_url, pago_em, ultimo_evento_em)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+     on conflict (asaas_payment_id) do update set
+       assinatura_id = coalesce(excluded.assinatura_id, financeiro.cobrancas.assinatura_id),
+       cliente_id = coalesce(excluded.cliente_id, financeiro.cobrancas.cliente_id),
+       valor = excluded.valor, valor_original = excluded.valor_original,
+       multa_aplicada = excluded.multa_aplicada, vencimento = excluded.vencimento,
+       status = excluded.status, forma_pagamento = excluded.forma_pagamento,
+       invoice_url = excluded.invoice_url, boleto_url = excluded.boleto_url,
+       pago_em = excluded.pago_em, ultimo_evento_em = excluded.ultimo_evento_em, updated_at = now()
+     where financeiro.cobrancas.ultimo_evento_em is null
+        or financeiro.cobrancas.ultimo_evento_em <= excluded.ultimo_evento_em
+     returning id`,
+    [
+      p.id, assinaturaId, clienteId, Number(p.value), original, multa, p.dueDate,
+      String(p.status), p.billingType ?? null, p.invoiceUrl ?? null, p.bankSlipUrl ?? null,
+      pago ? (p.confirmedDate || p.paymentDate || quando) : null, quando,
+    ],
+  );
+  return r.length ? 'aplicado' : 'ignorado_fora_de_ordem';
 }
 
 // ---------- rotas -------------------------------------------------------------
@@ -411,9 +432,10 @@ export function registrarFinanceiro(app: Express) {
     const ev = req.body || {};
     if (!ev.id || !ev.event) return res.status(400).json({ error: 'evento_invalido' });
     try {
-      const r = await sb<any[]>('POST', 'fin_eventos?on_conflict=asaas_event_id', {
-        asaas_event_id: String(ev.id), evento: String(ev.event), payload: ev,
-      }, 'resolution=ignore-duplicates,return=representation');
+      const r = await db(
+        'insert into financeiro.eventos (asaas_event_id, evento, payload) values ($1,$2,$3) on conflict (asaas_event_id) do nothing returning asaas_event_id',
+        [String(ev.id), String(ev.event), JSON.stringify(ev)],
+      );
       res.status(200).json({ received: true });
       if (!r.length) return; // já recebido antes
       let resultado = 'sem_acao';
@@ -422,9 +444,7 @@ export function registrarFinanceiro(app: Express) {
       } catch (e) {
         resultado = `erro: ${String((e as Error).message).slice(0, 200)}`;
       }
-      await sb('PATCH', `fin_eventos?asaas_event_id=eq.${encodeURIComponent(String(ev.id))}`, {
-        processado_em: new Date().toISOString(), resultado,
-      });
+      await db('update financeiro.eventos set processado_em = now(), resultado = $2 where asaas_event_id = $1', [String(ev.id), resultado]);
     } catch (e) {
       console.error('[fin/webhook]', (e as Error).message);
       if (!res.headersSent) res.status(500).json({ error: 'erro_interno' });
@@ -441,11 +461,11 @@ export function registrarFinanceiro(app: Express) {
       if (!nome || !(valor > 0) || !(dia >= 1 && dia <= 28)) return res.status(400).json({ error: 'dados_invalidos' });
       const token = crypto.randomBytes(32).toString('base64url');
       const dias = Math.min(Math.max(parseInt(String(b.expiraDias ?? 7), 10) || 7, 1), 30);
-      const [c] = await sb<any[]>('POST', 'fin_convites', {
-        token_hash: sha256(token), plano_nome: nome, valor, vencimento_dia: dia,
-        nome_ref: str(b.nomeRef, 120) || null, email_ref: str(b.emailRef, 150) || null,
-        expira_em: new Date(Date.now() + dias * 86400000).toISOString(),
-      });
+      const [c] = await db(
+        `insert into financeiro.convites (token_hash, plano_nome, valor, vencimento_dia, nome_ref, email_ref, expira_em)
+         values ($1,$2,$3,$4,$5,$6, now() + ($7 || ' days')::interval) returning id, expira_em`,
+        [sha256(token), nome, valor, dia, str(b.nomeRef, 120) || null, str(b.emailRef, 150) || null, String(dias)],
+      );
       res.json({ id: c.id, link: `${SITE_URL()}/cadastro/${token}`, expiraEm: c.expira_em });
     } catch (e) {
       console.error('[fin/convite]', (e as Error).message);
@@ -456,10 +476,10 @@ export function registrarFinanceiro(app: Express) {
   app.get('/api/admin/financeiro', naoConfigurado, exigeAdmin, async (_req, res) => {
     try {
       const [clientes, assinaturas, cobrancas, eventos] = await Promise.all([
-        sb<any[]>('GET', 'fin_clientes?select=id,nome,tipo,email,status_cadastro,asaas_customer_id,ultimo_erro,created_at&order=created_at.desc&limit=200'),
-        sb<any[]>('GET', 'fin_assinaturas?select=*&order=created_at.desc&limit=200'),
-        sb<any[]>('GET', 'fin_cobrancas?select=*&order=vencimento.desc&limit=300'),
-        sb<any[]>('GET', 'fin_eventos?select=asaas_event_id,evento,recebido_em,processado_em,resultado&order=recebido_em.desc&limit=100'),
+        db('select id, nome, tipo, email, status_cadastro, asaas_customer_id, ultimo_erro, created_at from financeiro.clientes order by created_at desc limit 200'),
+        db('select * from financeiro.assinaturas order by created_at desc limit 200'),
+        db('select * from financeiro.cobrancas order by vencimento desc limit 300'),
+        db('select asaas_event_id, evento, recebido_em, processado_em, resultado from financeiro.eventos order by recebido_em desc limit 100'),
       ]);
       res.json({ clientes, assinaturas, cobrancas, eventos, asaasBase: ASAAS_BASE().includes('sandbox') ? 'sandbox' : 'producao' });
     } catch (e) {

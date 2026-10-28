@@ -18,6 +18,7 @@ import { HowItWorksPage } from './pages/HowItWorksPage';
 import { MarinaTeste } from './pages/MarinaTeste';
 import { TermosPage } from './pages/TermosPage';
 import { PrivacidadePage } from './pages/PrivacidadePage';
+import { CadastroPage } from './pages/CadastroPage';
 import { Link } from './router/Link';
 import { ArrowLeft, Home, Sparkles } from 'lucide-react';
 
@@ -134,6 +135,11 @@ const RouteDispatcher: React.FC = () => {
   // 10. Política de Privacidade
   if (currentPath === '/privacidade') {
     return <PrivacidadePage />;
+  }
+
+  // 11. Cadastro financeiro (público Marina SDR ou por convite)
+  if (currentPath === '/cadastro' || currentPath.startsWith('/cadastro/')) {
+    return <CadastroPage />;
   }
 
   // 404 Fallback Page

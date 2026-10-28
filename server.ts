@@ -1,6 +1,7 @@
 import express from 'express';
 import path from 'path';
 import dotenv from 'dotenv';
+import { registrarFinanceiro } from './server/financeiro';
 
 dotenv.config();
 
@@ -90,6 +91,9 @@ app.post('/api/lead', async (req, res) => {
     return res.json({ success: true, leadId: null, message: 'Solicitação registrada com sucesso.' });
   }
 });
+
+// --- Módulo financeiro (cadastro + Asaas + webhook + admin) -----------------
+registrarFinanceiro(app);
 
 // --- Marina SDR — motor de regras -------------------------------------------
 // Responde de forma útil sem depender de nenhuma chave de API externa.

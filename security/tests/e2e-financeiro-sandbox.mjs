@@ -8,6 +8,9 @@ for (const line of fs.readFileSync(envFile, 'utf8').split(/\r?\n/)) {
   const i = line.indexOf('=');
   if (i > 0) env[line.slice(0, i)] = line.slice(i + 1);
 }
+// O servidor recebe a chave SEM o "$" inicial (como no EasyPanel); o teste usa a versão completa nas chamadas diretas.
+const asaasKeyFull = env.ASAAS_API_KEY.startsWith('$') ? env.ASAAS_API_KEY : '$' + env.ASAAS_API_KEY;
+env.ASAAS_API_KEY = asaasKeyFull.slice(1);
 if (!env.ASAAS_BASE_URL.includes('sandbox')) { console.log('ABORT: base nao e sandbox'); process.exit(1); }
 
 const srv = spawn(process.execPath, ['node_modules/tsx/dist/cli.mjs', 'server.ts'], { env, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -68,7 +71,7 @@ try {
   let paymentId = cob?.asaas_payment_id;
   let payment;
   if (!paymentId && ass?.asaas_subscription_id) {
-    const pr = await fetch(`${env.ASAAS_BASE_URL}/subscriptions/${ass.asaas_subscription_id}/payments?limit=1`, { headers: { access_token: env.ASAAS_API_KEY } });
+    const pr = await fetch(`${env.ASAAS_BASE_URL}/subscriptions/${ass.asaas_subscription_id}/payments?limit=1`, { headers: { access_token: asaasKeyFull } });
     payment = (await pr.json()).data?.[0];
     paymentId = payment?.id;
   }

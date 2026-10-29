@@ -8,7 +8,12 @@ const env = (k: string) => (process.env[k] || '').trim();
 
 // Conexão direta com papel restrito (antum_fin): só enxerga o schema "financeiro".
 const FIN_DATABASE_URL = () => env('FIN_DATABASE_URL');
-const ASAAS_KEY = () => env('ASAAS_API_KEY');
+// A chave do Asaas começa com "$aact_". Painéis como o EasyPanel tratam "$nome" como variável e
+// esvaziam o valor, então aceitamos a chave SEM o "$" inicial e o recolocamos aqui.
+const ASAAS_KEY = () => {
+  const k = env('ASAAS_API_KEY');
+  return k.startsWith('aact_') ? `$${k}` : k;
+};
 // Padrão = SANDBOX. Produção só com ASAAS_BASE_URL=https://api.asaas.com/v3 explícito.
 const ASAAS_BASE = () => env('ASAAS_BASE_URL') || 'https://api-sandbox.asaas.com/v3';
 const WEBHOOK_TOKEN = () => env('ASAAS_WEBHOOK_TOKEN');

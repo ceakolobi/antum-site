@@ -18,6 +18,9 @@ WORKDIR /app
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package*.json ./
+# Migrações do banco financeiro (rodadas à mão no console: node scripts/migrar-financeiro.mjs)
+COPY --from=builder /app/scripts ./scripts
+COPY --from=builder /app/supabase ./supabase
 
 ENV PORT=80
 EXPOSE 80

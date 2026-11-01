@@ -24,6 +24,11 @@ const CONTRATO_VERSAO = 'contrato-v1-2026-10';
 const MULTA_FIXA = 5.22;
 const GRUPO_ASAAS = 'Sistemas';
 
+const usaSsl = () => {
+  const f = env('FIN_DB_SSL').toLowerCase();
+  if (f) return f === 'true';
+  return /supabase\.(co|com)/i.test(FIN_DATABASE_URL());
+};
 const configurado = () => Boolean(FIN_DATABASE_URL() && ASAAS_KEY());
 
 // ---------- utilitários -------------------------------------------------------
@@ -79,7 +84,8 @@ async function db<T = any>(text: string, params: unknown[] = []): Promise<T[]> {
   if (!pool) {
     pool = new pg.Pool({
       connectionString: FIN_DATABASE_URL(),
-      ssl: { rejectUnauthorized: false },
+      // Postgres interno do EasyPanel não usa SSL. Supabase exige. FIN_DB_SSL=true|false força o modo.
+      ssl: usaSsl() ? { rejectUnauthorized: false } : false,
       max: 5,
       idleTimeoutMillis: 20_000,
       connectionTimeoutMillis: 8_000,

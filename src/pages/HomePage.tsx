@@ -8,6 +8,7 @@ import { EcosystemDiagram } from '../components/EcosystemDiagram';
 import { MicroHistory } from '../components/MicroHistory';
 import { SiteOfferBanner } from '../components/SiteOfferBanner';
 import { TechStackSection } from '../components/TechStackSection';
+import { MarinaBanner } from '../components/MarinaBanner';
 import {
   Sparkles,
   ArrowRight,
@@ -91,6 +92,7 @@ export const HomePage: React.FC = () => {
 
   return (
     <div id="home-page" className="min-h-screen pt-20">
+      <MarinaBanner />
       {/* 4. HOME — HERO */}
       <section
         id="hero-section"

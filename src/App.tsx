@@ -20,6 +20,7 @@ import { TermosPage } from './pages/TermosPage';
 import { PrivacidadePage } from './pages/PrivacidadePage';
 import { CadastroPage } from './pages/CadastroPage';
 import { AreaClientePage } from './pages/AreaClientePage';
+import { AdminPage } from './pages/AdminPage';
 import { Link } from './router/Link';
 import { ArrowLeft, Home, Sparkles } from 'lucide-react';
 
@@ -148,6 +149,11 @@ const RouteDispatcher: React.FC = () => {
   // 11. Cadastro financeiro (público Marina SDR ou por convite)
   if (currentPath === '/cadastro' || currentPath.startsWith('/cadastro/')) {
     return <CadastroPage />;
+  }
+
+  // 12. Painel administrativo (login e senha)
+  if (currentPath === '/admin' || currentPath === '/admin/') {
+    return <AdminPage />;
   }
 
   // 404 Fallback Page

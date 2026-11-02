@@ -3,6 +3,7 @@
 import type { Express, Request, Response, NextFunction } from 'express';
 import crypto from 'crypto';
 import pg from 'pg';
+import { registrarAdminAuth } from './adminAuth';
 
 const env = (k: string) => (process.env[k] || '').trim();
 
@@ -17,7 +18,6 @@ const ASAAS_KEY = () => {
 // Padrão = SANDBOX. Produção só com ASAAS_BASE_URL=https://api.asaas.com/v3 explícito.
 const ASAAS_BASE = () => env('ASAAS_BASE_URL') || 'https://api-sandbox.asaas.com/v3';
 const WEBHOOK_TOKEN = () => env('ASAAS_WEBHOOK_TOKEN');
-const ADMIN_TOKEN = () => env('FIN_ADMIN_TOKEN');
 const SITE_URL = () => env('SITE_URL') || 'https://antum.com.br';
 
 const CONTRATO_VERSAO = 'contrato-v1-2026-10';
@@ -148,12 +148,6 @@ function igual(a: string, b: string) {
   return x.length === y.length && crypto.timingSafeEqual(x, y);
 }
 
-function exigeAdmin(req: Request, res: Response, next: NextFunction) {
-  const t = ADMIN_TOKEN();
-  const h = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
-  if (!t || t.length < 32 || !h || !igual(h, t)) return res.status(401).json({ error: 'nao_autorizado' });
-  next();
-}
 
 // ---------- regras de plano ---------------------------------------------------
 interface PlanoResolvido {
@@ -463,6 +457,10 @@ export function registrarFinanceiro(app: Express) {
   const naoConfigurado = (_req: Request, res: Response, next: NextFunction) =>
     configurado() ? next() : res.status(503).json({ error: 'financeiro_nao_configurado' });
 
+  // Login do administrador (e-mail + senha, sessão em cookie, auditoria)
+  const { exigeAdmin, auditar } = registrarAdminAuth(app, { db, str, sha256, limite, ipDe, origemOk, naoConfigurado });
+  const quem = (res: Response) => String(res.locals.admin?.email || '');
+
   // Catálogo público: só produtos ativos, direto do banco (nenhum preço fixo no código)
   app.get('/api/catalogo', naoConfigurado, async (req, res) => {
     try {
@@ -556,24 +554,62 @@ export function registrarFinanceiro(app: Express) {
     }
   });
 
-  // ----- Admin (Bearer FIN_ADMIN_TOKEN) -----
+  // ----- Admin (login e senha + sessão em cookie) -----
   app.post('/api/admin/convites', naoConfigurado, exigeAdmin, async (req, res) => {
     try {
       const b = req.body || {};
       const valor = Number(b.valor);
       const dia = parseInt(String(b.vencimentoDia), 10);
       const nome = str(b.planoNome, 120);
-      if (!nome || !(valor > 0) || !(dia >= 1 && dia <= 28)) return res.status(400).json({ error: 'dados_invalidos' });
+      const taxa = b.taxaImplantacao === undefined || b.taxaImplantacao === '' ? 0 : Math.round(Number(b.taxaImplantacao) * 100) / 100;
+      const trial = b.trialDias === undefined || b.trialDias === '' ? 0 : parseInt(String(b.trialDias), 10);
+      if (!nome || !(valor > 0) || !(dia >= 1 && dia <= 28) || !(taxa >= 0 && taxa <= 100000) || !(trial >= 0 && trial <= 60)) {
+        return res.status(400).json({ error: 'dados_invalidos' });
+      }
       const token = crypto.randomBytes(32).toString('base64url');
       const dias = Math.min(Math.max(parseInt(String(b.expiraDias ?? 7), 10) || 7, 1), 30);
       const [c] = await db(
-        `insert into financeiro.convites (token_hash, plano_nome, valor, vencimento_dia, nome_ref, email_ref, expira_em)
-         values ($1,$2,$3,$4,$5,$6, now() + ($7 || ' days')::interval) returning id, expira_em`,
-        [sha256(token), nome, valor, dia, str(b.nomeRef, 120) || null, str(b.emailRef, 150) || null, String(dias)],
+        `insert into financeiro.convites
+           (token_hash, plano_nome, valor, vencimento_dia, nome_ref, email_ref, expira_em, taxa_implantacao, trial_dias, requer_aprovacao)
+         values ($1,$2,$3,$4,$5,$6, now() + ($7 || ' days')::interval, $8, $9, $10) returning id, expira_em`,
+        [sha256(token), nome, valor, dia, str(b.nomeRef, 120) || null, str(b.emailRef, 150) || null, String(dias), taxa, trial, b.requerAprovacao === true],
       );
+      await auditar(quem(res), 'convite_criado', { id: c.id, plano: nome, valor, dia, taxa, trial }, ipDe(req));
       res.json({ id: c.id, link: `${SITE_URL()}/cadastro/${token}`, expiraEm: c.expira_em });
     } catch (e) {
       console.error('[fin/convite]', (e as Error).message);
+      res.status(500).json({ error: 'erro_interno' });
+    }
+  });
+
+  // Dados do painel: resumo + listas já com o nome do cliente
+  app.get('/api/admin/painel', naoConfigurado, exigeAdmin, async (_req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    try {
+      const [resumo, clientes, assinaturas, cobrancas, auditoria] = await Promise.all([
+        db(`select
+              (select count(*)::int from financeiro.clientes) as clientes,
+              (select count(*)::int from financeiro.assinaturas where status = 'ATIVA') as ativas,
+              (select count(*)::int from financeiro.assinaturas where status = 'AGUARDANDO_APROVACAO') as aguardando,
+              (select coalesce(sum(valor),0) from financeiro.assinaturas where status = 'ATIVA') as mrr,
+              (select coalesce(sum(valor),0) from financeiro.cobrancas
+                 where pago_em >= date_trunc('month', now())) as recebido_mes,
+              (select count(*)::int from financeiro.cobrancas where status = 'OVERDUE') as vencidas,
+              (select coalesce(sum(valor),0) from financeiro.cobrancas where status = 'OVERDUE') as valor_vencido`),
+        db(`select id, nome, tipo, email, celular, cpf_cnpj, cidade, uf, status_cadastro, asaas_customer_id, ultimo_erro, created_at
+              from financeiro.clientes order by created_at desc limit 300`),
+        db(`select a.id, a.plano_slug, a.plano_nome, a.valor, a.taxa_implantacao, a.trial_dias, a.vencimento_dia,
+                   a.forma_pagamento, a.status, a.ultimo_erro, a.created_at, c.nome as cliente, c.email as cliente_email
+              from financeiro.assinaturas a join financeiro.clientes c on c.id = a.cliente_id
+             order by (a.status = 'AGUARDANDO_APROVACAO') desc, a.created_at desc limit 300`),
+        db(`select b.id, b.valor, b.vencimento, b.status, b.forma_pagamento, b.invoice_url, b.pago_em, c.nome as cliente
+              from financeiro.cobrancas b left join financeiro.clientes c on c.id = b.cliente_id
+             order by b.vencimento desc limit 300`),
+        db('select quando, admin_email, acao, detalhe, ip from financeiro.auditoria order by quando desc limit 60'),
+      ]);
+      res.json({ resumo: resumo[0], clientes, assinaturas, cobrancas, auditoria, asaasBase: ASAAS_BASE().includes('sandbox') ? 'sandbox' : 'producao' });
+    } catch (e) {
+      console.error('[fin/admin/painel]', (e as Error).message);
       res.status(500).json({ error: 'erro_interno' });
     }
   });
@@ -669,6 +705,7 @@ export function registrarFinanceiro(app: Express) {
         `insert into financeiro.planos (${cols.join(',')}) values (${cols.map((_, i) => `$${i + 1}`).join(',')}) returning *`,
         cols.map((c) => o[c]),
       );
+      await auditar(quem(res), 'catalogo_produto_criado', { slug: r.slug, valor: r.valor }, ipDe(req));
       res.json({ produto: r });
     } catch (e: any) {
       if (e?.code === '23505') return res.status(409).json({ error: 'slug_ja_existe' });
@@ -688,6 +725,7 @@ export function registrarFinanceiro(app: Express) {
       const sets = cols.map((c, i) => `${c} = $${i + 2}`).concat('updated_at = now()');
       const rows = await db(`update financeiro.planos set ${sets.join(', ')} where slug = $1 returning *`, [req.params.slug, ...cols.map((c) => o[c])]);
       if (!rows.length) return res.status(404).json({ error: 'produto_nao_encontrado' });
+      await auditar(quem(res), 'catalogo_produto_editado', { slug: req.params.slug, campos: cols }, ipDe(req));
       res.json({ produto: rows[0] });
     } catch (e) {
       console.error('[fin/admin/catalogo/put]', String((e as Error).message).slice(0, 200));
@@ -704,6 +742,7 @@ export function registrarFinanceiro(app: Express) {
         [req.params.id],
       );
       if (!upd.length) return res.status(409).json({ error: 'nao_esta_aguardando_aprovacao' });
+      await auditar(quem(res), 'contratacao_aprovada', { assinatura: req.params.id }, ipDe(req));
       try {
         res.json({ ok: true, ...(await ativarAssinatura(req.params.id)) });
       } catch (e: any) {

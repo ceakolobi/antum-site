@@ -3,6 +3,10 @@ import { Link } from '../router/Link';
 import { useRouter } from '../router/RouterContext';
 import { Sparkles, ArrowUpRight, Cpu, ShieldCheck, Terminal, Heart } from 'lucide-react';
 
+// Padrão único para todos os links das colunas do rodapé (mesmo tamanho, altura de linha e espaçamento)
+const linkCls = 'inline-flex items-center gap-1.5 text-sm leading-6 hover:text-cyan-400 transition-colors';
+const badgeBase = 'text-[10px] leading-none px-1.5 py-1 rounded border font-medium';
+
 export const Footer: React.FC = () => {
   const { openMarinaModal } = useRouter();
 
@@ -38,45 +42,45 @@ export const Footer: React.FC = () => {
             <h4 className="text-xs font-mono font-bold tracking-widest text-slate-200 uppercase">
               Soluções & Sistemas
             </h4>
-            <ul className="space-y-2 text-sm">
+            <ul className="space-y-1.5">
               <li>
-                <Link to="/portfolio/marina-sdr" className="hover:text-cyan-400 transition-colors flex items-center gap-1.5">
+                <Link to="/portfolio/marina-sdr" className={linkCls}>
                   <span>Marina — SDR com IA</span>
-                  <span className="text-[10px] px-1.5 py-0.2 bg-cyan-950 text-cyan-400 rounded border border-cyan-800/50">Flagship</span>
+                  <span className={`${badgeBase} bg-cyan-950 text-cyan-400 border-cyan-800/50`}>Flagship</span>
                 </Link>
               </li>
               <li>
-                <a href="/marina-sdr" className="hover:text-cyan-400 transition-colors">
+                <a href="/marina-sdr" className={linkCls}>
                   Marina SDR — teste 7 dias grátis
                 </a>
               </li>
               <li>
-                <Link to="/portfolio/harmony" className="hover:text-cyan-400 transition-colors">
+                <Link to="/portfolio/harmony" className={linkCls}>
                   Harmony (CRM Proteção Veicular)
                 </Link>
               </li>
               <li>
-                <Link to="/portfolio/nexus-rpa" className="hover:text-cyan-400 transition-colors">
+                <Link to="/portfolio/nexus-rpa" className={linkCls}>
                   NEXUS RPA (RPA & Sistemas Legados)
                 </Link>
               </li>
               <li>
-                <Link to="/portfolio/kate" className="hover:text-cyan-400 transition-colors">
+                <Link to="/portfolio/kate" className={linkCls}>
                   Kate (Assistente Jurídico IA)
                 </Link>
               </li>
               <li>
-                <Link to="/portfolio/yafit" className="hover:text-cyan-400 transition-colors">
+                <Link to="/portfolio/yafit" className={linkCls}>
                   Yafit (Gestão de Salão & Barbearia)
                 </Link>
               </li>
               <li>
-                <Link to="/portfolio/hagoth" className="hover:text-cyan-400 transition-colors">
+                <Link to="/portfolio/hagoth" className={linkCls}>
                   Hagoth (Criativos com IA)
                 </Link>
               </li>
               <li>
-                <Link to="/portfolio/sites-ia" className="hover:text-cyan-400 transition-colors">
+                <Link to="/portfolio/sites-ia" className={linkCls}>
                   Sites & Landing Pages com IA
                 </Link>
               </li>
@@ -88,35 +92,35 @@ export const Footer: React.FC = () => {
             <h4 className="text-xs font-mono font-bold tracking-widest text-slate-200 uppercase">
               Explorar
             </h4>
-            <ul className="space-y-2 text-sm">
+            <ul className="space-y-1.5">
               <li>
-                <Link to="/solucoes" className="hover:text-cyan-400 transition-colors">
+                <Link to="/solucoes" className={linkCls}>
                   Todas as Soluções
                 </Link>
               </li>
               <li>
-                <Link to="/portfolio" className="hover:text-cyan-400 transition-colors">
+                <Link to="/portfolio" className={linkCls}>
                   Portfólio Completo
                 </Link>
               </li>
               <li>
-                <Link to="/conteudo" className="hover:text-cyan-400 transition-colors">
+                <Link to="/conteudo" className={linkCls}>
                   IA na Prática (Artigos)
                 </Link>
               </li>
               <li>
-                <Link to="/lab" className="hover:text-cyan-400 transition-colors flex items-center gap-1">
+                <Link to="/lab" className={linkCls}>
                   <span>ANTUM LAB</span>
-                  <span className="text-[9px] px-1 py-0.2 bg-indigo-950 text-indigo-400 rounded border border-indigo-800/40">R&D</span>
+                  <span className={`${badgeBase} bg-indigo-950 text-indigo-400 border-indigo-800/40`}>R&D</span>
                 </Link>
               </li>
               <li>
-                <Link to="/sobre" className="hover:text-cyan-400 transition-colors">
+                <Link to="/sobre" className={linkCls}>
                   Sobre a ANTUM
                 </Link>
               </li>
               <li>
-                <Link to="/contato" className="hover:text-cyan-400 transition-colors">
+                <Link to="/contato" className={linkCls}>
                   Falar com Engenharia
                 </Link>
               </li>

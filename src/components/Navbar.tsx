@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from '../router/RouterContext';
 import { Link } from '../router/Link';
-import { Menu, X, Sparkles, ArrowUpRight, Cpu, ChevronDown } from 'lucide-react';
+import { Menu, X, Cpu, ChevronDown } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
-  const { currentPath, openMarinaModal } = useRouter();
+  const { currentPath } = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
@@ -134,29 +134,19 @@ export const Navbar: React.FC = () => {
           })}
         </nav>
 
-        {/* CTA: FALAR COM A MARINA */}
-        <div className="hidden md:flex items-center gap-3">
-          <button
-            id="navbar-cta-marina"
-            onClick={() => openMarinaModal('Olá Marina! Gostaria de entender como a ANTUM pode automatizar minha empresa.')}
-            className="group relative inline-flex items-center gap-2 px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-600 text-white shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 cursor-pointer"
+        {/* Acesso discreto ao painel admin */}
+        <div className="hidden md:flex items-center">
+          <a
+            id="navbar-painel-admin"
+            href="/admin"
+            className="text-[11px] tracking-wide text-slate-500 hover:text-slate-300 transition-colors"
           >
-            <Sparkles className="w-3.5 h-3.5 text-cyan-200 animate-spin-slow group-hover:rotate-12 transition-transform" />
-            <span>FALAR COM A MARINA</span>
-            <ArrowUpRight className="w-3.5 h-3.5 text-cyan-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-          </button>
+            Painel admin
+          </a>
         </div>
 
         {/* MOBILE CONTROLS */}
         <div className="flex items-center gap-2 md:hidden">
-          <button
-            id="mobile-cta-marina-compact"
-            onClick={() => openMarinaModal('Olá Marina!')}
-            className="px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 flex items-center gap-1.5"
-          >
-            <Sparkles className="w-3 h-3 text-cyan-400" />
-            <span>Marina</span>
-          </button>
 
           <button
             id="mobile-menu-toggle"
@@ -212,18 +202,10 @@ export const Navbar: React.FC = () => {
             })}
           </div>
 
-          <div className="pt-2">
-            <button
-              id="mobile-menu-marina-cta"
-              onClick={() => {
-                setIsMobileMenuOpen(false);
-                openMarinaModal('Olá Marina! Gostaria de entender o que a ANTUM pode automatizar para nós.');
-              }}
-              className="w-full py-3 px-4 rounded-xl text-xs font-bold uppercase tracking-wider bg-gradient-to-r from-cyan-500 to-blue-600 text-white flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20"
-            >
-              <Sparkles className="w-4 h-4 text-cyan-200" />
-              <span>FALAR COM A MARINA (SDR DE IA)</span>
-            </button>
+          <div className="pt-2 text-center">
+            <a id="mobile-menu-painel-admin" href="/admin" className="text-[11px] tracking-wide text-slate-500 hover:text-slate-300">
+              Painel admin
+            </a>
           </div>
         </div>
       )}

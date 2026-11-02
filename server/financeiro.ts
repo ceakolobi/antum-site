@@ -3,7 +3,10 @@
 import type { Express, Request, Response, NextFunction } from 'express';
 import crypto from 'crypto';
 import pg from 'pg';
+import fs from 'fs';
+import path from 'path';
 import { registrarAdminAuth } from './adminAuth';
+import { renderContrato, gerarPdf, enviarEmailContrato } from './contrato';
 
 const env = (k: string) => (process.env[k] || '').trim();
 
@@ -251,6 +254,97 @@ function validar(b: any, plano: PlanoResolvido) {
   };
 }
 
+// ---------- contrato (texto preenchido, PDF, aceite e e-mail) -----------------
+const brlTxt = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const CONFIG_CHAVES = ['empresa_razao', 'empresa_cnpj', 'empresa_endereco', 'empresa_email', 'empresa_foro'];
+
+function logoPath(): string | undefined {
+  const base = process.cwd();
+  const cands = [path.join(base, 'dist', 'assets', 'antum-logo-color.png'), path.join(base, 'public', 'assets', 'antum-logo-color.png')];
+  return cands.find((c) => fs.existsSync(c));
+}
+
+const fmtDoc = (tipo: string, d: string) =>
+  tipo === 'PJ' ? d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5') : d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+
+async function enviarContratoPorEmail(contratoId: string): Promise<'ENVIADO' | 'FALHA' | 'SEM_CHAVE'> {
+  const chave = env('RESEND_API_KEY');
+  const [c] = await db(
+    `select c.id, c.pdf, c.titulo, cl.nome, cl.email, a.plano_nome
+       from financeiro.contratos c join financeiro.clientes cl on cl.id = c.cliente_id
+       join financeiro.assinaturas a on a.id = c.assinatura_id where c.id = $1`, [contratoId]);
+  if (!c) return 'FALHA';
+  if (!chave) {
+    await db("update financeiro.contratos set email_status = 'SEM_CHAVE' where id = $1", [contratoId]);
+    return 'SEM_CHAVE';
+  }
+  try {
+    const [cfg] = await db("select valor from financeiro.config where chave = 'empresa_email'");
+    await enviarEmailContrato({
+      chave, base: env('RESEND_BASE_URL') || undefined, de: env('EMAIL_FROM') || 'Antum <contratos@antum.com.br>', para: c.email,
+      responderPara: (cfg?.valor || '').trim() || undefined,
+      nome: c.nome, plano: c.plano_nome, pdf: c.pdf, arquivo: 'contrato-antum.pdf',
+    });
+    await db("update financeiro.contratos set email_status = 'ENVIADO', email_enviado_em = now(), email_erro = null where id = $1", [contratoId]);
+    return 'ENVIADO';
+  } catch (e) {
+    await db("update financeiro.contratos set email_status = 'FALHA', email_erro = $2 where id = $1", [contratoId, String((e as Error).message).slice(0, 300)]);
+    return 'FALHA';
+  }
+}
+
+// Gera e guarda o contrato aceito (uma vez por assinatura). Nunca derruba o cadastro: erro só é registrado.
+async function registrarContrato(req: Request, ass: any, cliente: any) {
+  try {
+    if ((await db('select 1 from financeiro.contratos where assinatura_id = $1', [ass.id])).length) return;
+    const [modelo] = await db("select * from financeiro.contrato_modelos where slug = 'padrao' and ativo");
+    if (!modelo) return;
+    const cfg: Record<string, string> = {};
+    for (const r of await db('select chave, valor from financeiro.config')) cfg[r.chave] = r.valor;
+    const snap = ass.plano_snapshot || {};
+    const trial = Number(ass.trial_dias || 0);
+    const taxa = Number(ass.taxa_implantacao || 0);
+    const vars = {
+      ...cfg,
+      empresa_email_trecho: cfg.empresa_email ? `, e-mail ${cfg.empresa_email}` : '',
+      plano_nome: ass.plano_nome,
+      recursos_lista: (snap.recursos || []).map((r: string) => `- ${r}`).join('\n'),
+      condicoes: snap.condicoes || 'Hospedagem fornecida pela Antum.',
+      cliente_nome: cliente.nome,
+      cliente_doc_rotulo: cliente.tipo === 'PJ' ? 'CNPJ' : 'CPF',
+      cliente_doc: fmtDoc(cliente.tipo, cliente.cpf_cnpj),
+      cliente_endereco: `${cliente.endereco}, ${cliente.numero}${cliente.complemento ? ', ' + cliente.complemento : ''}, ${cliente.bairro}, ${cliente.cidade}/${cliente.uf}, CEP ${cliente.cep}`,
+      cliente_email: cliente.email, cliente_celular: cliente.celular,
+      valor_mensal: brlTxt(Number(ass.valor)), vencimento_dia: String(ass.vencimento_dia),
+      forma_pagamento: ass.forma_pagamento === 'BOLETO' ? 'boleto bancário' : 'PIX',
+      multa_fixa: brlTxt(Number(snap.multaFixa ?? MULTA_FIXA)),
+      bloco_implantacao: taxa > 0 ? `2.1-A. Pela implantação, o CLIENTE pagará uma taxa única de ${brlTxt(taxa)}, cobrada separadamente da mensalidade.` : '',
+      bloco_trial: trial > 0 ? `2.1-B. A ANTUM concede ${trial} dias de teste. A primeira mensalidade vence somente após o teste, e o CLIENTE pode antecipar o pagamento quando quiser.` : '',
+    };
+    const texto = renderContrato(modelo.texto, vars);
+    const aceiteEm = new Date();
+    const ip = ipDe(req);
+    const ua = str(req.headers['user-agent'], 300);
+    const hash = sha256(texto);
+    const rodape = [
+      `Aceito por: ${cliente.nome} (${vars.cliente_doc_rotulo} ${vars.cliente_doc})`,
+      `Data e hora: ${aceiteEm.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })} (horário de Brasília)`,
+      `Endereço IP: ${ip}`,
+      `Versão do documento: ${modelo.versao}`,
+      `Impressão digital (SHA-256) do texto: ${hash}`,
+    ];
+    const pdf = await gerarPdf(modelo.titulo, texto, rodape, logoPath());
+    const [c] = await db(
+      `insert into financeiro.contratos (assinatura_id, cliente_id, modelo_slug, versao, titulo, texto, texto_sha256, pdf, aceite_em, aceite_ip, aceite_user_agent)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) on conflict (assinatura_id) do nothing returning id`,
+      [ass.id, cliente.id, modelo.slug, modelo.versao, modelo.titulo, texto, hash, pdf, aceiteEm, ip, ua],
+    );
+    if (c) await enviarContratoPorEmail(c.id);
+  } catch (e) {
+    console.error('[fin/contrato]', String((e as Error).message).slice(0, 200));
+  }
+}
+
 // ---------- fluxo principal ---------------------------------------------------
 async function processarCadastro(req: Request, plano: PlanoResolvido, d: ReturnType<typeof validar>['dados']) {
   // 1) Cliente local (único por CPF/CNPJ) + registro do aceite
@@ -309,6 +403,9 @@ async function processarCadastro(req: Request, plano: PlanoResolvido, d: ReturnT
   if (plano.conviteId) {
     await db('update financeiro.convites set concluido_em = now() where id = $1', [plano.conviteId]);
   }
+
+  // Contrato aceito: texto congelado + PDF + e-mail (não bloqueia o cadastro se falhar)
+  await registrarContrato(req, ass, cliente);
 
   // Plano que precisa de aprovação: fica registrado e NADA é criado no Asaas até o admin aprovar
   if (ass.status === 'AGUARDANDO_APROVACAO') {
@@ -692,6 +789,67 @@ export function registrarFinanceiro(app: Express) {
       res.json({ produtos: rows });
     } catch (e) {
       console.error('[fin/admin/catalogo]', (e as Error).message);
+      res.status(500).json({ error: 'erro_interno' });
+    }
+  });
+
+  // Contratos aceitos (PDF), reenvio de e-mail e dados da empresa
+  app.get('/api/admin/contratos/:assinaturaId/pdf', naoConfigurado, exigeAdmin, async (req, res) => {
+    try {
+      const [c] = await db('select pdf from financeiro.contratos where assinatura_id = $1', [req.params.assinaturaId]);
+      if (!c?.pdf) return res.status(404).json({ error: 'contrato_nao_encontrado' });
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'inline; filename="contrato-antum.pdf"');
+      res.setHeader('Cache-Control', 'no-store');
+      res.end(c.pdf);
+    } catch (e) {
+      console.error('[fin/admin/contrato]', (e as Error).message);
+      res.status(500).json({ error: 'erro_interno' });
+    }
+  });
+
+  app.post('/api/admin/contratos/:assinaturaId/reenviar', naoConfigurado, exigeAdmin, async (req, res) => {
+    try {
+      const [c] = await db('select id from financeiro.contratos where assinatura_id = $1', [req.params.assinaturaId]);
+      if (!c) return res.status(404).json({ error: 'contrato_nao_encontrado' });
+      const status = await enviarContratoPorEmail(c.id);
+      await auditar(quem(res), 'contrato_reenviado', { assinatura: req.params.assinaturaId, status }, ipDe(req));
+      res.json({ ok: status === 'ENVIADO', status });
+    } catch (e) {
+      console.error('[fin/admin/reenviar]', (e as Error).message);
+      res.status(500).json({ error: 'erro_interno' });
+    }
+  });
+
+  app.get('/api/admin/config', naoConfigurado, exigeAdmin, async (_req, res) => {
+    try {
+      const rows = await db('select chave, valor from financeiro.config where chave = any($1)', [CONFIG_CHAVES]);
+      const out: Record<string, string> = {};
+      for (const r of rows) out[r.chave] = r.valor;
+      res.json({ config: out, emailConfigurado: Boolean(env('RESEND_API_KEY')) });
+    } catch (e) {
+      console.error('[fin/admin/config]', (e as Error).message);
+      res.status(500).json({ error: 'erro_interno' });
+    }
+  });
+
+  app.put('/api/admin/config', naoConfigurado, exigeAdmin, async (req, res) => {
+    try {
+      const b = (req.body || {}) as Record<string, unknown>;
+      const mudou: string[] = [];
+      for (const k of CONFIG_CHAVES) {
+        if (typeof b[k] !== 'string') continue;
+        await db(
+          `insert into financeiro.config (chave, valor) values ($1,$2)
+           on conflict (chave) do update set valor = excluded.valor, updated_at = now()`,
+          [k, str(b[k], 300)],
+        );
+        mudou.push(k);
+      }
+      await auditar(quem(res), 'config_empresa_editada', { campos: mudou }, ipDe(req));
+      res.json({ ok: true });
+    } catch (e) {
+      console.error('[fin/admin/config/put]', (e as Error).message);
       res.status(500).json({ error: 'erro_interno' });
     }
   });

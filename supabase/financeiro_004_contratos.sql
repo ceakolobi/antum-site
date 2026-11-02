@@ -10,6 +10,14 @@ insert into financeiro.config (chave, valor) values
   ('empresa_razao', ''), ('empresa_cnpj', ''), ('empresa_endereco', ''),
   ('empresa_email', ''), ('empresa_foro', 'Comarca de Joinville/SC')
 on conflict (chave) do nothing;
+-- Dados do cartão CNPJ (13/10/2026). Só preenche se ainda estiver vazio; depois edite no painel.
+update financeiro.config set valor = v.valor, updated_at = now()
+  from (values
+    ('empresa_razao','MARKA NOSSA SERVICOS ADMINISTRATIVOS LTDA (nome comercial ANTUM)'),
+    ('empresa_cnpj','08.754.551/0001-52'),
+    ('empresa_endereco','Rua Bernardo Aguiar, nº 352, Escritório, Centro, Barra Velha/SC, CEP 88.390-000')
+  ) as v(chave, valor)
+ where config.chave = v.chave and config.valor = '';
 
 -- Modelos de contrato: texto com {{variaveis}}. Editar o modelo NUNCA altera contratos já aceitos.
 create table if not exists financeiro.contrato_modelos (
@@ -57,7 +65,7 @@ revoke delete on financeiro.contratos from antum_fin;
 insert into financeiro.contrato_modelos (slug, titulo, versao, texto) values ('padrao', 'Contrato de Prestação de Serviços', 'contrato-v1-2026-11',
 $contrato$CONTRATO DE PRESTAÇÃO DE SERVIÇOS — {{plano_nome}}
 
-CONTRATADA: {{empresa_razao}}, inscrita no CNPJ nº {{empresa_cnpj}}, com sede em {{empresa_endereco}}, e-mail {{empresa_email}} (doravante "ANTUM").
+CONTRATADA: {{empresa_razao}}, inscrita no CNPJ nº {{empresa_cnpj}}, com sede em {{empresa_endereco}}{{empresa_email_trecho}} (doravante "ANTUM").
 
 CONTRATANTE: {{cliente_nome}}, {{cliente_doc_rotulo}} nº {{cliente_doc}}, com endereço em {{cliente_endereco}}, e-mail {{cliente_email}}, celular {{cliente_celular}} (doravante "CLIENTE").
 

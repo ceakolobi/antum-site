@@ -12,7 +12,7 @@ export function renderContrato(texto: string, vars: Variaveis): string {
     .trim();
 }
 
-export function gerarPdf(titulo: string, corpo: string, rodape: string[]): Promise<Buffer> {
+export function gerarPdf(titulo: string, corpo: string, rodape: string[], logoPath?: string): Promise<Buffer> {
   return new Promise((ok, erro) => {
     const doc = new PDFDocument({
       size: 'A4',
@@ -24,6 +24,14 @@ export function gerarPdf(titulo: string, corpo: string, rodape: string[]): Promi
     doc.on('end', () => ok(Buffer.concat(partes)));
     doc.on('error', erro);
 
+    if (logoPath) {
+      try {
+        // logo quadrado (1808x1782): 70pt de lado, alinhado à esquerda do cabeçalho
+        doc.image(logoPath, doc.page.margins.left, 40, { fit: [70, 70] });
+        doc.y = 40 + 70 + 8;
+        doc.x = doc.page.margins.left;
+      } catch { /* sem logo, segue só com o texto */ }
+    }
     const linhas = corpo.split('\n');
     linhas.forEach((l, i) => {
       const t = l.trimEnd();

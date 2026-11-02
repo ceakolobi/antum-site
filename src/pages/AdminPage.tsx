@@ -239,8 +239,39 @@ const LinksAba: React.FC = () => {
   );
 };
 
+// ---------- dados da empresa (usados no contrato) -----------------------------
+const EmpresaAba: React.FC = () => {
+  const [f, setF] = useState({ empresa_razao: '', empresa_cnpj: '', empresa_endereco: '', empresa_email: '', empresa_foro: '' });
+  const [emailOk, setEmailOk] = useState<boolean | null>(null);
+  const [msg, setMsg] = useState<{ ok: boolean; texto: string } | null>(null);
+  useEffect(() => {
+    api('/api/admin/config').then((r) => { if (r.ok) { setF((s) => ({ ...s, ...r.data.config })); setEmailOk(r.data.emailConfigurado); } });
+  }, []);
+  const set = (k: keyof typeof f, v: string) => setF((s) => ({ ...s, [k]: v }));
+  const salvar = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const r = await api('/api/admin/config', { method: 'PUT', body: f });
+    setMsg({ ok: r.ok, texto: r.ok ? 'Dados salvos. Valem para os próximos contratos.' : 'Não foi possível salvar.' });
+  };
+  return (
+    <form onSubmit={salvar} className="max-w-2xl space-y-3">
+      <p className="text-sm text-slate-400">Estes dados aparecem como CONTRATADA no contrato. Contratos já aceitos não mudam.</p>
+      <div><label className={rot}>Razão social (e nome comercial)</label><input className={campo} value={f.empresa_razao} onChange={(e) => set('empresa_razao', e.target.value)} /></div>
+      <div><label className={rot}>CNPJ</label><input className={campo} value={f.empresa_cnpj} onChange={(e) => set('empresa_cnpj', e.target.value)} /></div>
+      <div><label className={rot}>Endereço completo</label><input className={campo} value={f.empresa_endereco} onChange={(e) => set('empresa_endereco', e.target.value)} /></div>
+      <div><label className={rot}>E-mail de contato (opcional, também recebe as respostas do cliente)</label><input className={campo} type="email" value={f.empresa_email} onChange={(e) => set('empresa_email', e.target.value)} /></div>
+      <div><label className={rot}>Foro</label><input className={campo} value={f.empresa_foro} onChange={(e) => set('empresa_foro', e.target.value)} /></div>
+      <p className={`text-xs ${emailOk ? 'text-emerald-300' : 'text-amber-300'}`}>
+        {emailOk === null ? '' : emailOk ? 'Envio de e-mail do contrato: ativo.' : 'Envio de e-mail do contrato: desligado (falta a chave do Resend no servidor). O PDF é gerado e guardado do mesmo jeito.'}
+      </p>
+      {msg && <p className={`text-sm ${msg.ok ? 'text-emerald-300' : 'text-red-300'}`}>{msg.texto}</p>}
+      <button className={btn}>Salvar</button>
+    </form>
+  );
+};
+
 // ---------- página ------------------------------------------------------------
-const ABAS = ['Resumo', 'Contratações', 'Clientes', 'Cobranças', 'Catálogo', 'Links', 'Atividade'] as const;
+const ABAS = ['Resumo', 'Contratações', 'Clientes', 'Cobranças', 'Catálogo', 'Links', 'Empresa', 'Atividade'] as const;
 
 export const AdminPage: React.FC = () => {
   const [sessao, setSessao] = useState<string | null | undefined>(undefined); // undefined = verificando
@@ -273,6 +304,14 @@ export const AdminPage: React.FC = () => {
     setOcupado(null);
     setAviso({ ok: r.ok, texto: r.ok ? 'Contratação aprovada e criada no Asaas.' : ERROS[r.data?.error] || 'Não foi possível aprovar.' });
     carregar();
+  };
+
+  const reenviar = async (id: string) => {
+    if (!window.confirm('Reenviar o contrato em PDF para o e-mail do cliente?')) return;
+    setAviso(null);
+    const r = await api(`/api/admin/contratos/${id}/reenviar`, { method: 'POST', body: {} });
+    const t = r.data?.status === 'ENVIADO' ? 'Contrato reenviado por e-mail.' : r.data?.status === 'SEM_CHAVE' ? 'E-mail desligado: falta a chave do Resend no servidor.' : r.status === 404 ? 'Esta contratação não tem contrato gerado.' : 'Não foi possível enviar o e-mail.';
+    setAviso({ ok: r.data?.status === 'ENVIADO', texto: t });
   };
 
   const pendentes = useMemo(() => painel?.assinaturas.filter((a) => a.status === 'AGUARDANDO_APROVACAO').length ?? 0, [painel]);
@@ -336,7 +375,11 @@ export const AdminPage: React.FC = () => {
                 <td className="px-3 py-2">{a.trial_dias > 0 ? `${a.trial_dias} dias` : '—'}</td>
                 <td className="px-3 py-2">dia {a.vencimento_dia}</td>
                 <td className="px-3 py-2"><Selo texto={STATUS_ASS[a.status] || a.status} />{a.ultimo_erro && <div className="text-xs text-red-300 mt-1 max-w-[220px]">{a.ultimo_erro}</div>}</td>
-                <td className="px-3 py-2">{a.status === 'AGUARDANDO_APROVACAO' && <button className={btn} disabled={ocupado === a.id} onClick={() => aprovar(a.id)}>{ocupado === a.id ? 'Criando…' : 'Aprovar'}</button>}</td>
+                <td className="px-3 py-2 whitespace-nowrap space-x-2">
+                  {a.status === 'AGUARDANDO_APROVACAO' && <button className={btn} disabled={ocupado === a.id} onClick={() => aprovar(a.id)}>{ocupado === a.id ? 'Criando…' : 'Aprovar'}</button>}
+                  <a className={btnSec} href={`/api/admin/contratos/${a.id}/pdf`} target="_blank" rel="noopener noreferrer">Contrato PDF</a>
+                  <button className={btnSec} onClick={() => reenviar(a.id)}>Reenviar e-mail</button>
+                </td>
               </tr>
             ))}
           </Tabela>
@@ -375,6 +418,7 @@ export const AdminPage: React.FC = () => {
 
         {aba === 'Catálogo' && <CatalogoAba />}
         {aba === 'Links' && <LinksAba />}
+        {aba === 'Empresa' && <EmpresaAba />}
 
         {painel && aba === 'Atividade' && (
           <Tabela cols={['Quando', 'Quem', 'O que', 'Detalhe', 'IP']} vazio="Sem atividade." vazioQuando={painel.auditoria.length === 0}>

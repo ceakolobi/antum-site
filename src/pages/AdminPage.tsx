@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { SenhaInput } from '../components/SenhaInput';
 import { Loader2, LogOut, Copy, Check, AlertTriangle, RefreshCw } from 'lucide-react';
 
 // ---------- tipos -------------------------------------------------------------
@@ -76,7 +77,7 @@ const Login: React.FC<{ onOk: (email: string) => void }> = ({ onOk }) => {
       <form onSubmit={entrar} className="max-w-sm mx-auto space-y-5 rounded-2xl border border-slate-700 bg-slate-900/60 p-7">
         <h1 className="text-xl font-extrabold text-white text-center">Painel Antum</h1>
         <div><label className={rot}>E-mail</label><input className={campo} type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required /></div>
-        <div><label className={rot}>Senha</label><input className={campo} type="password" autoComplete="current-password" value={senha} onChange={(e) => setSenha(e.target.value)} required /></div>
+        <div><label className={rot}>Senha</label><SenhaInput className={campo} autoComplete="current-password" value={senha} onChange={(e) => setSenha(e.target.value)} required /></div>
         {erro && <p className="text-sm text-red-300">{erro}</p>}
         <button className={`${btn} w-full`} disabled={env}>{env ? 'Entrando…' : 'Entrar'}</button>
       </form>

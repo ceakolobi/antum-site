@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { SenhaInput } from '../components/SenhaInput';
 import { Link } from '../router/Link';
 import { useRouter } from '../router/RouterContext';
 import { Wallet, UserRound, LogOut, Loader2, FileText, ExternalLink, ShieldCheck } from 'lucide-react';
@@ -84,8 +85,8 @@ const DefinirSenha: React.FC = () => {
   return (
     <Cartao titulo="Definir senha">
       <form onSubmit={enviar} className="space-y-4">
-        <div><label className={rotulo}>Nova senha</label><input className={campo} type="password" autoComplete="new-password" value={s1} onChange={(e) => setS1(e.target.value)} required /></div>
-        <div><label className={rotulo}>Repita a nova senha</label><input className={campo} type="password" autoComplete="new-password" value={s2} onChange={(e) => setS2(e.target.value)} required /></div>
+        <div><label className={rotulo}>Nova senha</label><SenhaInput className={campo} autoComplete="new-password" value={s1} onChange={(e) => setS1(e.target.value)} required /></div>
+        <div><label className={rotulo}>Repita a nova senha</label><SenhaInput className={campo} autoComplete="new-password" value={s2} onChange={(e) => setS2(e.target.value)} required /></div>
         <p className="text-xs text-slate-500">Mínimo de 10 caracteres, com letras e números.</p>
         {erro && <p className="text-sm text-red-300">{erro}</p>}
         <button className={botao} disabled={env || !token}>{env ? 'Salvando…' : 'Salvar senha'}</button>
@@ -123,7 +124,7 @@ const Login: React.FC<{ aoEntrar: () => void }> = ({ aoEntrar }) => {
       {modo === 'entrar' ? (
         <form onSubmit={entrar} className="space-y-4">
           <div><label className={rotulo}>E-mail</label><input className={campo} type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required /></div>
-          <div><label className={rotulo}>Senha</label><input className={campo} type="password" autoComplete="current-password" value={senha} onChange={(e) => setSenha(e.target.value)} required /></div>
+          <div><label className={rotulo}>Senha</label><SenhaInput className={campo} autoComplete="current-password" value={senha} onChange={(e) => setSenha(e.target.value)} required /></div>
           {erro && <p className="text-sm text-red-300">{erro}</p>}
           <button className={botao} disabled={env}>{env ? 'Entrando…' : 'Entrar'}</button>
           <button type="button" className="text-sm text-cyan-400 underline" onClick={() => { setModo('esqueci'); setErro(''); }}>Primeiro acesso ou esqueci minha senha</button>
@@ -162,8 +163,8 @@ const TrocarSenha: React.FC = () => {
   };
   return (
     <form onSubmit={salvar} className="space-y-3 max-w-sm">
-      <div><label className={rotulo}>Senha atual</label><input className={campo} type="password" autoComplete="current-password" value={atual} onChange={(e) => setAtual(e.target.value)} required /></div>
-      <div><label className={rotulo}>Nova senha</label><input className={campo} type="password" autoComplete="new-password" value={nova} onChange={(e) => setNova(e.target.value)} required /></div>
+      <div><label className={rotulo}>Senha atual</label><SenhaInput className={campo} autoComplete="current-password" value={atual} onChange={(e) => setAtual(e.target.value)} required /></div>
+      <div><label className={rotulo}>Nova senha</label><SenhaInput className={campo} autoComplete="new-password" value={nova} onChange={(e) => setNova(e.target.value)} required /></div>
       {msg && <p className={`text-sm ${msg.ok ? 'text-emerald-300' : 'text-red-300'}`}>{msg.t}</p>}
       <button className={botao}>Alterar senha</button>
     </form>

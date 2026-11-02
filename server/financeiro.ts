@@ -955,6 +955,26 @@ export function registrarFinanceiro(app: Express) {
     }
   });
 
+  // Traz do Asaas as cobranças de todos os clientes da Antum (para conferir o que o webhook ainda não entregou)
+  let ultimaSyncAdmin = 0;
+  app.post('/api/admin/sincronizar', naoConfigurado, exigeAdmin, async (req, res) => {
+    if (Date.now() - ultimaSyncAdmin < 15_000) return res.status(429).json({ error: 'muitas_tentativas' });
+    ultimaSyncAdmin = Date.now();
+    try {
+      const cls = await db('select id from financeiro.clientes where asaas_customer_id is not null order by created_at desc limit 150');
+      let ok = 0, falhas = 0;
+      for (const c of cls) {
+        ultimaSync.delete(c.id); // ignora o intervalo de 1 minuto: foi pedido pelo administrador
+        try { await sincronizarCobrancas(c.id); ok++; } catch { falhas++; }
+      }
+      await auditar(quem(res), 'sincronizado_com_asaas', { clientes: ok, falhas }, ipDe(req));
+      res.json({ ok: true, clientes: ok, falhas });
+    } catch (e) {
+      console.error('[fin/admin/sync]', (e as Error).message);
+      res.status(500).json({ error: 'erro_interno' });
+    }
+  });
+
   app.get('/api/admin/financeiro', naoConfigurado, exigeAdmin, async (_req, res) => {
     try {
       const [clientes, assinaturas, cobrancas, eventos] = await Promise.all([

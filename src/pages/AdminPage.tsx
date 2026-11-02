@@ -521,6 +521,14 @@ export const AdminPage: React.FC = () => {
   }, []);
   useEffect(() => { if (sessao) carregar(); }, [sessao, carregar]);
 
+  const sincronizar = async () => {
+    setAviso(null); setOcupado('sync');
+    const r = await api('/api/admin/sincronizar', { method: 'POST', body: {} });
+    setOcupado(null);
+    setAviso({ ok: r.ok, texto: r.ok ? `Sincronizado com o Asaas (${r.data.clientes} cliente${r.data.clientes === 1 ? '' : 's'}${r.data.falhas ? `, ${r.data.falhas} com falha` : ''}).` : r.status === 429 ? 'Aguarde alguns segundos e tente de novo.' : 'Não foi possível sincronizar agora.' });
+    carregar();
+  };
+
   const sair = async () => { await api('/api/admin/logout', { method: 'POST', body: {} }); setSessao(null); setPainel(null); };
 
   const aprovar = async (id: string) => {
@@ -560,6 +568,7 @@ export const AdminPage: React.FC = () => {
               </span>
             )}
             <button className={btnSec} onClick={carregar}><RefreshCw className="w-3.5 h-3.5 inline mr-1" />Atualizar</button>
+            <button className={btnSec} disabled={ocupado === 'sync'} onClick={sincronizar}>{ocupado === 'sync' ? 'Sincronizando…' : 'Sincronizar com o Asaas'}</button>
             <button className={btnSec} onClick={sair}><LogOut className="w-3.5 h-3.5 inline mr-1" />Sair</button>
           </div>
         </div>

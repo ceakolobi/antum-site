@@ -19,6 +19,7 @@ import { MarinaTeste } from './pages/MarinaTeste';
 import { TermosPage } from './pages/TermosPage';
 import { PrivacidadePage } from './pages/PrivacidadePage';
 import { CadastroPage } from './pages/CadastroPage';
+import { PlanosPage } from './pages/PlanosPage';
 import { AreaClientePage } from './pages/AreaClientePage';
 import { AdminPage } from './pages/AdminPage';
 import { Link } from './router/Link';
@@ -64,6 +65,8 @@ const RouteDispatcher: React.FC = () => {
       document.title = 'Termos de Uso | ANTUM';
     } else if (currentPath === '/privacidade') {
       document.title = 'Política de Privacidade | ANTUM';
+    } else if (currentPath === '/planos') {
+      document.title = 'Planos / Produtos | ANTUM';
     } else if (currentPath === '/area-do-cliente') {
       document.title = 'Área do cliente | ANTUM';
     }
@@ -139,6 +142,11 @@ const RouteDispatcher: React.FC = () => {
   // 10. Política de Privacidade
   if (currentPath === '/privacidade') {
     return <PrivacidadePage />;
+  }
+
+  // 10.0 Planos / Produtos (catálogo público, preços vêm do banco)
+  if (currentPath === '/planos') {
+    return <PlanosPage />;
   }
 
   // 10.1 Área do cliente (porta de entrada: cadastro e, em breve, Minha Conta)

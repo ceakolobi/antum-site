@@ -109,11 +109,8 @@ export const CadastroPage: React.FC = () => {
       try {
         // Sem link de convite e sem produto escolhido: mostra o catálogo
         if (!token && !slug) {
-          const r = await fetch('/api/catalogo');
-          const j = await r.json();
-          if (!vivo) return;
-          if (!r.ok) return setErroPlano(MENSAGENS[j.error] || 'Não foi possível carregar os produtos.');
-          return setCatalogo(j.produtos || []);
+          window.location.replace('/planos');
+          return;
         }
         const q = token ? `?token=${encodeURIComponent(token)}` : `?plano=${encodeURIComponent(slug)}`;
         const r = await fetch(`/api/cadastro/plano${q}`);
@@ -313,7 +310,7 @@ export const CadastroPage: React.FC = () => {
                 <p className="text-xs text-amber-300">Este plano é sujeito a aprovação da Antum. A cobrança só é gerada depois da aprovação.</p>
               )}
               {!token && (
-                <button type="button" onClick={() => { window.history.replaceState({}, '', '/cadastro'); setPlano(null); setSlug(''); setCatalogo(null); }}
+                <button type="button" onClick={() => { window.location.href = '/planos'; }}
                   className="text-xs text-cyan-400 underline">
                   Trocar de plano
                 </button>

@@ -26,7 +26,14 @@ export const Navbar: React.FC = () => {
   const navLinks: { label: string; path: string; children?: { label: string; desc: string; path: string }[] }[] = [
     { label: 'INÍCIO', path: '/' },
     { label: 'SOLUÇÕES', path: '/solucoes' },
-    { label: 'COMO FUNCIONA', path: '/como-funciona' },
+    {
+      label: 'PLANOS / PRODUTOS',
+      path: '/planos',
+      children: [
+        { label: 'Planos e preços', desc: 'Escolha, veja o valor e contrate', path: '/planos' },
+        { label: 'Como funciona', desc: 'Do briefing ao site no ar', path: '/como-funciona' },
+      ] as { label: string; desc: string; path: string }[],
+    },
     {
       label: 'PORTFÓLIO',
       path: '/portfolio',
@@ -44,6 +51,7 @@ export const Navbar: React.FC = () => {
   const isActive = (path: string) => {
     if (path === '/' && currentPath === '/') return true;
     if (path === '/portfolio' && currentPath === '/clientes') return true;
+    if (path === '/planos' && currentPath === '/como-funciona') return true;
     if (path !== '/' && currentPath.startsWith(path)) return true;
     return false;
   };

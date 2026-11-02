@@ -26,53 +26,6 @@ const steps = [
   },
 ];
 
-const plans = [
-  {
-    name: 'Site',
-    ideal: 'Para aparecer bem no Google e receber contatos todos os dias.',
-    price: 'R$ 70',
-    per: '/mês',
-    highlight: false,
-    items: [
-      'Criação e implantação completa, sem custo',
-      'Site no ar, hospedado e seguro',
-      'Formulário de contato e ícone do WhatsApp',
-      '1 atualização por semana',
-    ],
-    marina: 'Olá Marina! Quero saber mais sobre o plano de site por R$ 70/mês.',
-    cta: 'Quero este plano',
-  },
-  {
-    name: 'Site + Marina',
-    ideal: 'Para não perder cliente por demora na resposta, nem de madrugada.',
-    price: 'R$ 99',
-    per: '/mês',
-    highlight: true,
-    items: [
-      'Tudo do plano Site',
-      'Marina, a SDR de IA, atendendo seus clientes 24 horas',
-      'Responde dúvidas e passa os contatos para você',
-    ],
-    marina: 'Olá Marina! Quero saber mais sobre o plano Site + Marina por R$ 99/mês.',
-    cta: 'Quero site + Marina',
-  },
-  {
-    name: 'Loja virtual ou sistema (SaaS)',
-    ideal: 'Para quem vende pela internet ou precisa de um sistema próprio, com atendimento por IA.',
-    price: 'R$ 180',
-    per: '/mês',
-    highlight: false,
-    items: [
-      'Criação e implantação completas, sem custo',
-      'Loja virtual ou sistema (SaaS) sob medida para o seu negócio',
-      'Marina, a SDR de IA, atendendo e qualificando seus clientes 24 horas',
-      '1 atualização por semana',
-    ],
-    marina: 'Olá Marina! Quero saber mais sobre a loja virtual ou sistema com SDR por R$ 180/mês.',
-    cta: 'Quero loja ou sistema',
-  },
-];
-
 const faqs = [
   ['Preciso pagar pela criação do site?', 'Não. A criação e a implantação completa não têm cobrança. Você paga a mensalidade do plano.'],
   ['E o domínio (o endereço .com.br)?', 'O registro do domínio é pago à parte, direto por você. Ele é o seu endereço na internet.'],
@@ -134,48 +87,13 @@ export const HowItWorksPage: React.FC = () => {
           </div>
         </section>
 
-        {/* PLANOS */}
-        <section className="mb-20">
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-white mb-2">Três planos, sem complicação</h2>
-          <p className="text-sm text-slate-400 mb-8">O registro do domínio é pago à parte, direto por você.</p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {plans.map((p) => (
-              <div
-                key={p.name}
-                className={`p-7 rounded-3xl border flex flex-col ${
-                  p.highlight ? 'bg-gradient-to-b from-cyan-950/50 to-[#0e1422] border-cyan-500/50' : 'bg-[#0e1422] border-slate-800'
-                }`}
-              >
-                {p.highlight && (
-                  <span className="self-start mb-3 text-[10px] font-mono font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-cyan-500 text-slate-950">
-                    Mais completo
-                  </span>
-                )}
-                <h3 className="text-lg font-bold text-white">{p.name}</h3>
-                <p className="mt-2">
-                  <span className="text-4xl font-extrabold text-white">{p.price}</span>
-                  <span className="text-sm text-slate-400">{p.per}</span>
-                </p>
-                <p className="mt-2 text-xs text-slate-400 leading-relaxed min-h-[2.5rem]">{p.ideal}</p>
-                <ul className="mt-5 space-y-2.5 flex-1">
-                  {p.items.map((i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm text-slate-300">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" />
-                      <span>{i}</span>
-                    </li>
-                  ))}
-                </ul>
-                <button
-                  onClick={() => openMarinaModal(p.marina)}
-                  className={`mt-6 py-3 rounded-xl text-sm font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                    p.highlight ? 'bg-cyan-500 hover:bg-cyan-400 text-slate-950' : 'bg-slate-800 hover:bg-slate-700 text-white'
-                  }`}
-                >
-                  {p.cta}
-                </button>
-              </div>
-            ))}
-          </div>
+        {/* PLANOS: os valores ficam na página Planos / Produtos (catálogo único) */}
+        <section className="mb-20 p-8 rounded-3xl bg-[#0e1422] border border-slate-800 text-center">
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-white mb-2">Quanto custa?</h2>
+          <p className="text-sm text-slate-400 mb-6">Veja os planos, o que cada um inclui e os valores atualizados. O registro do domínio é pago à parte, direto por você.</p>
+          <Link to="/planos" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-sm font-bold uppercase tracking-wider">
+            Ver planos e produtos <ArrowRight className="w-4 h-4" />
+          </Link>
         </section>
 
         {/* FAQ */}

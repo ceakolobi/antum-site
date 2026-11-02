@@ -26,9 +26,9 @@ export function gerarPdf(titulo: string, corpo: string, rodape: string[], logoPa
 
     if (logoPath) {
       try {
-        // logo quadrado (1808x1782): 70pt de lado, alinhado à esquerda do cabeçalho
-        doc.image(logoPath, doc.page.margins.left, 40, { fit: [70, 70] });
-        doc.y = 40 + 70 + 8;
+        // logo horizontal: cabe em 230x70pt, alinhado à esquerda do cabeçalho
+        doc.image(logoPath, doc.page.margins.left, 40, { fit: [230, 70] });
+        doc.y = 40 + 70 + 12;
         doc.x = doc.page.margins.left;
       } catch { /* sem logo, segue só com o texto */ }
     }

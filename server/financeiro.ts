@@ -260,7 +260,7 @@ const CONFIG_CHAVES = ['empresa_razao', 'empresa_cnpj', 'empresa_endereco', 'emp
 
 function logoPath(): string | undefined {
   const base = process.cwd();
-  const cands = [path.join(base, 'dist', 'assets', 'antum-logo-color.png'), path.join(base, 'public', 'assets', 'antum-logo-color.png')];
+  const cands = [path.join(base, 'dist', 'assets', 'antum-logo-contrato.png'), path.join(base, 'public', 'assets', 'antum-logo-contrato.png')];
   return cands.find((c) => fs.existsSync(c));
 }
 

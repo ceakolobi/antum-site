@@ -3,7 +3,8 @@
 //
 // Variáveis de ambiente TEMPORÁRIAS (defina, rode, e REMOVA depois):
 //   FIN_ADMIN_DB_URL  = postgres://USUARIO_ADMIN:SENHA_ADMIN@HOST_INTERNO:5432/antum_fin   (do painel "Credenciais" do serviço)
-//   FIN_APP_PASSWORD  = senha NOVA do papel antum_fin (>= 24 caracteres; use só letras e números)
+//   FIN_APP_PASSWORD  = (OPCIONAL) só na 1ª vez: senha do papel antum_fin (>= 24 caracteres, só letras e números).
+//                       Nas migrações seguintes NÃO informe: a senha atual do site é mantida.
 // Opcional: FIN_DB_SSL=true  (só se o banco exigir SSL)
 //
 // O script nunca imprime senhas. É idempotente: pode rodar de novo sem duplicar nada.
@@ -21,8 +22,8 @@ function falha(msg) {
   process.exit(1);
 }
 if (!adminUrl) falha('defina FIN_ADMIN_DB_URL (URL de administrador do banco).');
-if (appPwd.length < 24) falha('FIN_APP_PASSWORD precisa ter 24+ caracteres.');
-if (!/^[A-Za-z0-9]+$/.test(appPwd)) falha('FIN_APP_PASSWORD: use apenas letras e números (evita problemas na URL).');
+if (appPwd && appPwd.length < 24) falha('FIN_APP_PASSWORD precisa ter 24+ caracteres.');
+if (appPwd && !/^[A-Za-z0-9]+$/.test(appPwd)) falha('FIN_APP_PASSWORD: use apenas letras e números (evita problemas na URL).');
 
 const arquivos = fs.readdirSync(dir).filter((f) => /^financeiro_\d+.*\.sql$/.test(f)).sort();
 if (!arquivos.length) falha(`nenhum arquivo financeiro_*.sql em ${dir}`);
@@ -56,11 +57,13 @@ try {
       falha(`${arq}: ${e.message}`);
     }
   }
-  // Define a senha do papel restrito do site (antum_fin).
-  await client.query(`alter role antum_fin with login password ${client.escapeLiteral(appPwd)}`);
+  // Define a senha do papel restrito do site (antum_fin) SOMENTE se foi informada.
+  if (appPwd) {
+    await client.query(`alter role antum_fin with login password ${client.escapeLiteral(appPwd)}`);
+  }
   const t = await client.query("select count(*)::int n from pg_tables where schemaname = 'financeiro'");
-  console.log(`OK: schema financeiro com ${t.rows[0].n} tabelas; senha do papel antum_fin definida.`);
-  console.log('Próximo passo: defina FIN_DATABASE_URL no app e REMOVA FIN_ADMIN_DB_URL e FIN_APP_PASSWORD.');
+  console.log(`OK: schema financeiro com ${t.rows[0].n} tabelas; ${appPwd ? 'senha do papel antum_fin definida' : 'senha do site mantida'}.`);
+  if (appPwd) console.log('Próximo passo: defina FIN_DATABASE_URL no app e REMOVA FIN_ADMIN_DB_URL e FIN_APP_PASSWORD.');
 } catch (e) {
   falha(e.message);
 } finally {

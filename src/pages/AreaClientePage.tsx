@@ -16,9 +16,9 @@ export const AreaClientePage: React.FC = () => (
           className="group rounded-2xl border border-slate-700 hover:border-cyan-400 bg-slate-900/60 p-6 space-y-3 transition-colors"
         >
           <UserPlus className="w-7 h-7 text-cyan-400" />
-          <h2 className="text-lg font-bold text-white">Contratar a Marina SDR</h2>
+          <h2 className="text-lg font-bold text-white">Contratar um serviço</h2>
           <p className="text-sm text-slate-400">
-            Faça seu cadastro, escolha o vencimento e receba o link da primeira cobrança na hora.
+            Escolha o plano, veja o valor, faça seu cadastro e receba o link da cobrança na hora.
           </p>
           <span className="inline-flex items-center gap-2 text-sm font-semibold text-cyan-300">
             Fazer cadastro <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />

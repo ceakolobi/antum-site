@@ -11,6 +11,24 @@ interface PlanoInfo {
   nomeRef: string | null;
   emailRef: string | null;
   multaFixa: number;
+  descricao?: string | null;
+  recursos?: string[];
+  condicoes?: string | null;
+  taxaImplantacao?: number;
+  trialDias?: number;
+  requerAprovacao?: boolean;
+}
+
+interface Produto {
+  slug: string;
+  nome: string;
+  descricao: string | null;
+  recursos: string[];
+  valor: number;
+  taxaImplantacao: number;
+  trialDias: number;
+  requerAprovacao: boolean;
+  condicoes: string | null;
 }
 
 interface Resultado {
@@ -18,6 +36,9 @@ interface Resultado {
   vencimento: string | null;
   plano: string;
   valor: number;
+  aguardandoAprovacao?: boolean;
+  trialDias?: number;
+  taxaImplantacao?: number;
 }
 
 const brl = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -63,6 +84,8 @@ export const CadastroPage: React.FC = () => {
   }, [currentPath]);
 
   const [plano, setPlano] = useState<PlanoInfo | null>(null);
+  const [slug, setSlug] = useState<string>(() => new URLSearchParams(window.location.search).get('plano') || '');
+  const [catalogo, setCatalogo] = useState<Produto[] | null>(null);
   const [erroPlano, setErroPlano] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [erroEnvio, setErroEnvio] = useState('');
@@ -80,11 +103,20 @@ export const CadastroPage: React.FC = () => {
   const set = (k: keyof typeof f, v: string | boolean) => setF((s) => ({ ...s, [k]: v as never }));
 
   useEffect(() => {
-    document.title = 'Cadastro | ANTUM';
+    document.title = 'Contratar | ANTUM';
     let vivo = true;
     (async () => {
       try {
-        const r = await fetch(`/api/cadastro/plano${token ? `?token=${encodeURIComponent(token)}` : ''}`);
+        // Sem link de convite e sem produto escolhido: mostra o catálogo
+        if (!token && !slug) {
+          const r = await fetch('/api/catalogo');
+          const j = await r.json();
+          if (!vivo) return;
+          if (!r.ok) return setErroPlano(MENSAGENS[j.error] || 'Não foi possível carregar os produtos.');
+          return setCatalogo(j.produtos || []);
+        }
+        const q = token ? `?token=${encodeURIComponent(token)}` : `?plano=${encodeURIComponent(slug)}`;
+        const r = await fetch(`/api/cadastro/plano${q}`);
         const j = await r.json();
         if (!vivo) return;
         if (!r.ok) return setErroPlano(MENSAGENS[j.error] || 'Não foi possível carregar o cadastro.');
@@ -100,7 +132,13 @@ export const CadastroPage: React.FC = () => {
       }
     })();
     return () => { vivo = false; };
-  }, [token]);
+  }, [token, slug]);
+
+  const escolher = (sl: string) => {
+    window.history.replaceState({}, '', `/cadastro?plano=${encodeURIComponent(sl)}`);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setSlug(sl);
+  };
 
   const buscarCep = async (cep: string) => {
     if (dig(cep).length !== 8) return;
@@ -127,7 +165,7 @@ export const CadastroPage: React.FC = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...f, token: token || undefined,
+          ...f, token: token || undefined, plano: !token && slug ? slug : undefined,
           vencimentoDia: f.vencimentoDia ? Number(f.vencimentoDia) : undefined,
         }),
       });
@@ -167,23 +205,85 @@ export const CadastroPage: React.FC = () => {
       <section className="min-h-screen pt-32 pb-20 px-4">
         <div className="max-w-lg mx-auto text-center space-y-5">
           <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto" />
-          <h1 className="text-2xl font-extrabold text-white">Cadastro concluído</h1>
-          <p className="text-sm text-slate-300">
-            Sua assinatura do plano <strong>{resultado.plano}</strong> ({brl(resultado.valor)}/mês) foi criada.
-            {resultado.vencimento && <> Primeiro vencimento: <strong>{resultado.vencimento.split('-').reverse().join('/')}</strong>.</>}
-          </p>
-          {resultado.pagamentoUrl ? (
-            <a
-              href={resultado.pagamentoUrl} target="_blank" rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-sm"
-            >
-              Ver cobrança e pagar <ExternalLink className="w-4 h-4" />
-            </a>
-          ) : (
-            <p className="text-sm text-slate-400">
-              A primeira cobrança ainda está sendo gerada. Você receberá o link assim que ela estiver disponível.
+          <h1 className="text-2xl font-extrabold text-white">
+            {resultado.aguardandoAprovacao ? 'Pedido recebido' : 'Cadastro concluído'}
+          </h1>
+          {resultado.aguardandoAprovacao ? (
+            <p className="text-sm text-slate-300">
+              Recebemos o seu pedido do plano <strong>{resultado.plano}</strong> ({brl(resultado.valor)}/mês). A Antum vai
+              analisar e entrar em contato. A cobrança só é gerada depois da aprovação.
             </p>
+          ) : (
+            <>
+              <p className="text-sm text-slate-300">
+                Sua assinatura do plano <strong>{resultado.plano}</strong> ({brl(resultado.valor)}/mês) foi criada.
+                {resultado.trialDias ? <> Você tem <strong>{resultado.trialDias} dias de teste</strong>.</> : null}
+                {resultado.vencimento && <> Primeiro vencimento: <strong>{resultado.vencimento.split('-').reverse().join('/')}</strong>.</>}
+                {resultado.taxaImplantacao ? <> A implantação ({brl(resultado.taxaImplantacao)}) é cobrada à parte, uma única vez.</> : null}
+              </p>
+              {resultado.pagamentoUrl ? (
+                <a
+                  href={resultado.pagamentoUrl} target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-sm"
+                >
+                  Ver cobrança e pagar <ExternalLink className="w-4 h-4" />
+                </a>
+              ) : (
+                <p className="text-sm text-slate-400">
+                  A primeira cobrança ainda está sendo gerada. Você receberá o link assim que ela estiver disponível.
+                </p>
+              )}
+            </>
           )}
+        </div>
+      </section>
+    );
+  }
+
+  if (!token && !slug && !erroPlano) {
+    return (
+      <section className="min-h-screen pt-28 pb-20 px-4">
+        <div className="max-w-5xl mx-auto">
+          <div className="mb-10 text-center">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-white">Escolha o seu plano</h1>
+            <p className="text-sm text-slate-400 mt-3">Veja o que está incluso, o valor e contrate em poucos minutos.</p>
+          </div>
+          {!catalogo ? (
+            <p className="text-sm text-slate-500 flex items-center justify-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" /> Carregando…
+            </p>
+          ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {catalogo.map((p) => (
+                <div key={p.slug} className="rounded-2xl border border-slate-700 bg-slate-900/60 p-6 flex flex-col">
+                  <h2 className="text-lg font-bold text-white">{p.nome}</h2>
+                  <p className="mt-1 text-2xl font-extrabold text-cyan-300">
+                    {brl(p.valor)}<span className="text-sm font-medium text-slate-400">/mês</span>
+                  </p>
+                  {p.descricao && <p className="text-sm text-slate-400 mt-3">{p.descricao}</p>}
+                  <ul className="mt-4 space-y-1.5 text-sm text-slate-300 flex-1">
+                    {p.recursos.map((r) => (
+                      <li key={r} className="flex gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" />{r}</li>
+                    ))}
+                  </ul>
+                  <div className="mt-4 space-y-1 text-xs text-slate-400">
+                    {p.trialDias > 0 && <p>{p.trialDias} dias de teste antes da primeira cobrança.</p>}
+                    {p.taxaImplantacao > 0 && <p>Implantação: {brl(p.taxaImplantacao)} (cobrança única).</p>}
+                    {p.requerAprovacao && <p>Contratação sujeita a aprovação da Antum.</p>}
+                  </div>
+                  <button
+                    type="button" onClick={() => escolher(p.slug)}
+                    className="mt-5 w-full px-5 py-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-sm"
+                  >
+                    {p.requerAprovacao ? 'Solicitar' : 'Contratar'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <p className="text-center text-xs text-slate-500 mt-8">
+            Hospedagem fornecida pela Antum. Domínio, quando necessário, é contratado e pago pelo cliente.
+          </p>
         </div>
       </section>
     );
@@ -195,10 +295,30 @@ export const CadastroPage: React.FC = () => {
         <div className="mb-8 text-center">
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white">Cadastro financeiro ANTUM</h1>
           {plano ? (
-            <p className="text-sm text-slate-400 mt-3">
-              Plano <strong className="text-cyan-300">{plano.plano}</strong> —{' '}
-              <strong className="text-white">{brl(plano.valor)}/mês</strong>
-            </p>
+            <div className="mt-3 space-y-1.5">
+              <p className="text-sm text-slate-400">
+                Plano <strong className="text-cyan-300">{plano.plano}</strong> —{' '}
+                <strong className="text-white">{brl(plano.valor)}/mês</strong>
+              </p>
+              {plano.descricao && <p className="text-xs text-slate-500">{plano.descricao}</p>}
+              {!!plano.trialDias && (
+                <p className="text-xs text-emerald-300">
+                  {plano.trialDias} dias de teste: a primeira cobrança vence só depois do teste, e você pode antecipar o pagamento quando quiser.
+                </p>
+              )}
+              {!!plano.taxaImplantacao && (
+                <p className="text-xs text-slate-400">Implantação: {brl(plano.taxaImplantacao)}, cobrança única à parte da mensalidade.</p>
+              )}
+              {plano.requerAprovacao && (
+                <p className="text-xs text-amber-300">Este plano é sujeito a aprovação da Antum. A cobrança só é gerada depois da aprovação.</p>
+              )}
+              {!token && (
+                <button type="button" onClick={() => { window.history.replaceState({}, '', '/cadastro'); setPlano(null); setSlug(''); setCatalogo(null); }}
+                  className="text-xs text-cyan-400 underline">
+                  Trocar de plano
+                </button>
+              )}
+            </div>
           ) : (
             <p className="text-sm text-slate-500 mt-3 flex items-center justify-center gap-2">
               <Loader2 className="w-4 h-4 animate-spin" /> Carregando…

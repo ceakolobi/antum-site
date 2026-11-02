@@ -64,9 +64,10 @@ const hojeSP = () => {
 };
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 
-// Próximo vencimento: o dia escolhido, com pelo menos 5 dias de folga a partir de hoje.
-export function proximoVencimento(dia: number, hoje: Date = hojeSP()): string {
-  const minimo = new Date(hoje.getTime() + 5 * 86400000);
+// Próximo vencimento: o dia escolhido, com pelo menos `minDias` de folga a partir de hoje
+// (5 por padrão; num plano com teste grátis, a folga é a duração do teste).
+export function proximoVencimento(dia: number, hoje: Date = hojeSP(), minDias = 5): string {
+  const minimo = new Date(hoje.getTime() + minDias * 86400000);
   let ano = hoje.getUTCFullYear();
   let mes = hoje.getUTCMonth();
   for (let i = 0; i < 3; i++) {
@@ -161,12 +162,19 @@ interface PlanoResolvido {
   planoNome: string;
   valor: number;
   diasPermitidos: number[];
+  taxaImplantacao: number;
+  trialDias: number;
+  requerAprovacao: boolean;
+  descricao?: string | null;
+  recursos?: string[];
+  condicoes?: string | null;
   nomeRef?: string | null;
   emailRef?: string | null;
   vinculado?: string | null;
 }
 
-async function resolverPlano(token: string | undefined): Promise<PlanoResolvido | { erro: string; status: number }> {
+// Plano vem do catálogo (banco) ou de um convite do admin. Nenhum preço fica fixo no código.
+async function resolverPlano(token: string | undefined, slug?: string): Promise<PlanoResolvido | { erro: string; status: number }> {
   if (token) {
     if (!/^[A-Za-z0-9_-]{32,64}$/.test(token)) return { erro: 'convite_invalido', status: 404 };
     const rows = await db('select * from financeiro.convites where token_hash = $1', [sha256(token)]);
@@ -180,20 +188,30 @@ async function resolverPlano(token: string | undefined): Promise<PlanoResolvido 
       planoNome: c.plano_nome,
       valor: Number(c.valor),
       diasPermitidos: [c.vencimento_dia],
+      taxaImplantacao: Number(c.taxa_implantacao || 0),
+      trialDias: Number(c.trial_dias || 0),
+      requerAprovacao: Boolean(c.requer_aprovacao),
       nomeRef: c.nome_ref,
       emailRef: c.email_ref,
       vinculado: c.cpf_cnpj_vinculado,
     };
   }
-  const rows = await db("select * from financeiro.planos where slug = 'marina-sdr' and automatico and ativo");
+  const slugOk = /^[a-z0-9-]{2,60}$/.test(slug || '') ? (slug as string) : 'marina-sdr';
+  const rows = await db('select * from financeiro.planos where slug = $1 and ativo', [slugOk]);
   const p = rows[0];
-  if (!p) return { erro: 'plano_indisponivel', status: 503 };
+  if (!p) return { erro: 'plano_indisponivel', status: slug ? 404 : 503 };
   return {
     conviteId: null,
     planoSlug: p.slug,
     planoNome: p.nome,
     valor: Number(p.valor),
     diasPermitidos: p.dias_vencimento,
+    taxaImplantacao: Number(p.taxa_implantacao || 0),
+    trialDias: Number(p.trial_dias || 0),
+    requerAprovacao: Boolean(p.requer_aprovacao),
+    descricao: p.descricao,
+    recursos: p.recursos || [],
+    condicoes: p.condicoes,
   };
 }
 
@@ -267,21 +285,8 @@ async function processarCadastro(req: Request, plano: PlanoResolvido, d: ReturnT
     if (!v.length) throw Object.assign(new Error('convite_de_outro_cliente'), { status: 409 });
   }
 
-  // 2) Cliente no Asaas (sem duplicar)
-  if (!cliente.asaas_customer_id) {
-    const achados = await asaas<any>('GET', `/customers?cpfCnpj=${d.doc}&limit=1`);
-    let cus = achados?.data?.[0];
-    const payload = {
-      name: d.nome, cpfCnpj: d.doc, email: d.email, mobilePhone: d.celular,
-      phone: d.telefone || undefined, postalCode: d.cep, address: d.endereco,
-      addressNumber: d.numero, complement: d.complemento || undefined, province: d.bairro,
-      externalReference: cliente.id, groupName: GRUPO_ASAAS, notificationDisabled: true,
-    };
-    if (!cus) cus = await asaas<any>('POST', '/customers', payload);
-    [cliente] = await db('update financeiro.clientes set asaas_customer_id = $2, updated_at = now() where id = $1 returning *', [cliente.id, cus.id]);
-  }
-
-  // 3) Assinatura (uma por cliente + plano/convite; reaproveita em nova tentativa)
+  // 2) Assinatura local (uma por cliente + plano/convite; reaproveita em nova tentativa).
+  //    Guarda uma FOTO do preço e das condições vigentes: mudar o catálogo depois não altera este contrato.
   let ass: any = (
     await db(
       plano.conviteId
@@ -291,13 +296,62 @@ async function processarCadastro(req: Request, plano: PlanoResolvido, d: ReturnT
     )
   )[0];
   if (!ass) {
+    const foto = {
+      plano: plano.planoNome, valorMensal: plano.valor, taxaImplantacao: plano.taxaImplantacao,
+      trialDias: plano.trialDias, condicoes: plano.condicoes ?? null, recursos: plano.recursos ?? [],
+      contratoVersao: CONTRATO_VERSAO, multaFixa: MULTA_FIXA, registradoEm: new Date().toISOString(),
+    };
     [ass] = await db(
       `insert into financeiro.assinaturas
-         (cliente_id, convite_id, plano_slug, plano_nome, valor, vencimento_dia, forma_pagamento)
-       values ($1,$2,$3,$4,$5,$6,$7) returning *`,
-      [cliente.id, plano.conviteId, plano.planoSlug, plano.planoNome, plano.valor, d.dia, d.forma],
+         (cliente_id, convite_id, plano_slug, plano_nome, valor, vencimento_dia, forma_pagamento,
+          taxa_implantacao, trial_dias, plano_snapshot, status)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11) returning *`,
+      [cliente.id, plano.conviteId, plano.planoSlug, plano.planoNome, plano.valor, d.dia, d.forma,
+       plano.taxaImplantacao, plano.trialDias, JSON.stringify(foto),
+       plano.requerAprovacao ? 'AGUARDANDO_APROVACAO' : 'CRIANDO'],
     );
   }
+
+  if (plano.conviteId) {
+    await db('update financeiro.convites set concluido_em = now() where id = $1', [plano.conviteId]);
+  }
+
+  // Plano que precisa de aprovação: fica registrado e NADA é criado no Asaas até o admin aprovar
+  if (ass.status === 'AGUARDANDO_APROVACAO') {
+    return {
+      etapas: { cadastro: true, assinatura: false, cobranca: false },
+      aguardandoAprovacao: true, pagamentoUrl: null, vencimento: null,
+      plano: ass.plano_nome, valor: Number(ass.valor),
+      trialDias: Number(ass.trial_dias), taxaImplantacao: Number(ass.taxa_implantacao),
+    };
+  }
+  return ativarAssinatura(ass.id);
+}
+
+// Cria (sem duplicar) cliente, assinatura e taxa de implantação no Asaas a partir do que está no banco.
+// Usada no cadastro automático e na aprovação feita pelo admin.
+async function ativarAssinatura(assId: string) {
+  let ass: any = (await db('select * from financeiro.assinaturas where id = $1', [assId]))[0];
+  if (!ass) throw Object.assign(new Error('assinatura_nao_encontrada'), { status: 404 });
+  let cliente: any = (await db('select * from financeiro.clientes where id = $1', [ass.cliente_id]))[0];
+
+  // Cliente no Asaas (sem duplicar)
+  if (!cliente.asaas_customer_id) {
+    const achados = await asaas<any>('GET', `/customers?cpfCnpj=${cliente.cpf_cnpj}&limit=1`);
+    let cus = achados?.data?.[0];
+    const payload = {
+      name: cliente.nome, cpfCnpj: cliente.cpf_cnpj, email: cliente.email, mobilePhone: cliente.celular,
+      phone: cliente.telefone || undefined, postalCode: cliente.cep, address: cliente.endereco,
+      addressNumber: cliente.numero, complement: cliente.complemento || undefined, province: cliente.bairro,
+      externalReference: cliente.id, groupName: GRUPO_ASAAS, notificationDisabled: true,
+    };
+    if (!cus) cus = await asaas<any>('POST', '/customers', payload);
+    [cliente] = await db('update financeiro.clientes set asaas_customer_id = $2, updated_at = now() where id = $1 returning *', [cliente.id, cus.id]);
+  }
+
+  // Assinatura recorrente. Com teste grátis, a 1ª cobrança vence só depois do teste.
+  const trial = Number(ass.trial_dias) || 0;
+  let primeiroVenc = proximoVencimento(ass.vencimento_dia, hojeSP(), trial > 0 ? trial : 5);
   if (!ass.asaas_subscription_id) {
     // Se uma tentativa anterior criou no Asaas mas não gravou aqui, recupera pelo externalReference
     const ja = await asaas<any>('GET', `/subscriptions?externalReference=${ass.id}&limit=1`);
@@ -307,20 +361,38 @@ async function processarCadastro(req: Request, plano: PlanoResolvido, d: ReturnT
         customer: cliente.asaas_customer_id,
         billingType: ass.forma_pagamento,
         value: Number(ass.valor),
-        nextDueDate: proximoVencimento(ass.vencimento_dia),
+        nextDueDate: primeiroVenc,
         cycle: 'MONTHLY',
         description: `Antum — ${ass.plano_nome}`,
         externalReference: ass.id,
         fine: { value: MULTA_FIXA, type: 'FIXED' },
       });
     }
+    if (sub?.nextDueDate) primeiroVenc = String(sub.nextDueDate);
     [ass] = await db(
       "update financeiro.assinaturas set asaas_subscription_id = $2, status = 'ATIVA', ultimo_erro = null, updated_at = now() where id = $1 returning *",
       [ass.id, sub.id],
     );
   }
 
-  // 4) Primeira cobrança (link de pagamento)
+  // Taxa de implantação: cobrança única, separada da mensalidade, sem duplicar
+  if (Number(ass.taxa_implantacao) > 0) {
+    const refImpl = `${ass.id}:impl`;
+    const jaImpl = await asaas<any>('GET', `/payments?externalReference=${encodeURIComponent(refImpl)}&limit=1`);
+    if (!jaImpl?.data?.[0]) {
+      await asaas<any>('POST', '/payments', {
+        customer: cliente.asaas_customer_id,
+        billingType: ass.forma_pagamento,
+        value: Number(ass.taxa_implantacao),
+        dueDate: primeiroVenc,
+        description: `Antum — Implantação ${ass.plano_nome}`,
+        externalReference: refImpl,
+        fine: { value: MULTA_FIXA, type: 'FIXED' },
+      });
+    }
+  }
+
+  // Primeira cobrança da mensalidade (link de pagamento)
   let pagamentoUrl: string | null = null;
   let vencimento: string | null = null;
   try {
@@ -330,13 +402,11 @@ async function processarCadastro(req: Request, plano: PlanoResolvido, d: ReturnT
   } catch { /* cobrança ainda não materializada: o webhook completa depois */ }
 
   await db("update financeiro.clientes set status_cadastro = 'CONCLUIDO', ultimo_erro = null, updated_at = now() where id = $1", [cliente.id]);
-  if (plano.conviteId) {
-    await db('update financeiro.convites set concluido_em = now() where id = $1', [plano.conviteId]);
-  }
 
   return {
     etapas: { cadastro: true, assinatura: true, cobranca: Boolean(pagamentoUrl) },
-    pagamentoUrl, vencimento, plano: ass.plano_nome, valor: Number(ass.valor),
+    aguardandoAprovacao: false, pagamentoUrl, vencimento, plano: ass.plano_nome, valor: Number(ass.valor),
+    trialDias: trial, taxaImplantacao: Number(ass.taxa_implantacao),
   };
 }
 
@@ -393,17 +463,41 @@ export function registrarFinanceiro(app: Express) {
   const naoConfigurado = (_req: Request, res: Response, next: NextFunction) =>
     configurado() ? next() : res.status(503).json({ error: 'financeiro_nao_configurado' });
 
+  // Catálogo público: só produtos ativos, direto do banco (nenhum preço fixo no código)
+  app.get('/api/catalogo', naoConfigurado, async (req, res) => {
+    try {
+      if (!limite(`cat:${ipDe(req)}`, 60, 10 * 60_000)) return res.status(429).json({ error: 'muitas_requisicoes' });
+      const rows = await db(
+        `select slug, nome, descricao, recursos, valor, taxa_implantacao, trial_dias, requer_aprovacao, dias_vencimento, condicoes
+           from financeiro.planos where ativo order by ordem, nome`,
+      );
+      res.json({
+        produtos: rows.map((r: any) => ({
+          slug: r.slug, nome: r.nome, descricao: r.descricao, recursos: r.recursos || [],
+          valor: Number(r.valor), taxaImplantacao: Number(r.taxa_implantacao), trialDias: r.trial_dias,
+          requerAprovacao: r.requer_aprovacao, diasPermitidos: r.dias_vencimento, condicoes: r.condicoes,
+        })),
+      });
+    } catch (e) {
+      console.error('[fin/catalogo]', (e as Error).message);
+      res.status(500).json({ error: 'erro_interno' });
+    }
+  });
+
   // Dados do plano para montar a página (público ou por convite)
   app.get('/api/cadastro/plano', naoConfigurado, async (req, res) => {
     try {
       if (!limite(`plano:${ipDe(req)}`, 60, 10 * 60_000)) return res.status(429).json({ error: 'muitas_requisicoes' });
       const token = typeof req.query.token === 'string' ? req.query.token : undefined;
-      const p = await resolverPlano(token);
+      const slug = typeof req.query.plano === 'string' ? req.query.plano : undefined;
+      const p = await resolverPlano(token, slug);
       if ('erro' in p) return res.status(p.status).json({ error: p.erro });
       res.json({
         plano: p.planoNome, valor: p.valor, diasPermitidos: p.diasPermitidos,
         porConvite: Boolean(token), nomeRef: p.nomeRef ?? null, emailRef: p.emailRef ?? null,
         multaFixa: MULTA_FIXA, contratoVersao: CONTRATO_VERSAO,
+        descricao: p.descricao ?? null, recursos: p.recursos ?? [], condicoes: p.condicoes ?? null,
+        taxaImplantacao: p.taxaImplantacao, trialDias: p.trialDias, requerAprovacao: p.requerAprovacao,
       });
     } catch (e) {
       console.error('[fin/plano]', (e as Error).message);
@@ -420,7 +514,7 @@ export function registrarFinanceiro(app: Express) {
       return res.status(429).json({ error: 'muitas_requisicoes' });
     }
     try {
-      const plano = await resolverPlano(typeof b.token === 'string' ? b.token : undefined);
+      const plano = await resolverPlano(typeof b.token === 'string' ? b.token : undefined, typeof b.plano === 'string' ? b.plano : undefined);
       if ('erro' in plano) return res.status(plano.status).json({ error: plano.erro });
       const { erros, dados } = validar(b, plano);
       if (Object.keys(erros).length) return res.status(400).json({ error: 'dados_invalidos', campos: erros });
@@ -495,6 +589,130 @@ export function registrarFinanceiro(app: Express) {
       res.json({ clientes, assinaturas, cobrancas, eventos, asaasBase: ASAAS_BASE().includes('sandbox') ? 'sandbox' : 'producao' });
     } catch (e) {
       console.error('[fin/admin]', (e as Error).message);
+      res.status(500).json({ error: 'erro_interno' });
+    }
+  });
+
+  // ---------- admin: catálogo de produtos ------------------------------------
+  const SLUG_RE = /^[a-z0-9-]{2,60}$/;
+  function lerPlano(b: any, criar: boolean) {
+    const e: Record<string, string> = {};
+    const o: Record<string, unknown> = {};
+    if (criar || b.slug !== undefined) {
+      const slug = str(b.slug, 60).toLowerCase();
+      if (!SLUG_RE.test(slug)) e.slug = 'Use letras minúsculas, números e hífen (2 a 60).';
+      o.slug = slug;
+    }
+    if (criar || b.nome !== undefined) {
+      const nome = str(b.nome, 80);
+      if (nome.length < 3) e.nome = 'Nome muito curto.';
+      o.nome = nome;
+    }
+    if (criar || b.valor !== undefined) {
+      const v = Math.round(Number(b.valor) * 100) / 100;
+      if (!(v > 0 && v <= 100000)) e.valor = 'Valor mensal inválido.';
+      o.valor = v;
+    }
+    if (b.taxaImplantacao !== undefined) {
+      const v = Math.round(Number(b.taxaImplantacao) * 100) / 100;
+      if (!(v >= 0 && v <= 100000)) e.taxaImplantacao = 'Taxa de implantação inválida.';
+      o.taxa_implantacao = v;
+    }
+    if (b.trialDias !== undefined) {
+      const v = parseInt(String(b.trialDias), 10);
+      if (!(v >= 0 && v <= 60)) e.trialDias = 'Teste de 0 a 60 dias.';
+      o.trial_dias = v;
+    }
+    if (b.diasPermitidos !== undefined) {
+      const dias = Array.isArray(b.diasPermitidos) ? b.diasPermitidos.map((x: unknown) => parseInt(String(x), 10)) : [];
+      if (!dias.length || dias.length > 6 || dias.some((d: number) => !(d >= 1 && d <= 28))) e.diasPermitidos = 'Informe de 1 a 6 dias entre 1 e 28.';
+      o.dias_vencimento = dias;
+    }
+    if (b.descricao !== undefined) o.descricao = str(b.descricao, 600) || null;
+    if (b.condicoes !== undefined) o.condicoes = str(b.condicoes, 1000) || null;
+    if (b.contratoModelo !== undefined) o.contrato_modelo = str(b.contratoModelo, 80) || null;
+    if (b.recursos !== undefined) {
+      const r = Array.isArray(b.recursos) ? b.recursos.map((x: unknown) => str(x, 140)).filter(Boolean) : [];
+      if (r.length > 20) e.recursos = 'No máximo 20 itens.';
+      o.recursos = r;
+    }
+    if (b.requerAprovacao !== undefined) { o.requer_aprovacao = b.requerAprovacao === true; o.automatico = b.requerAprovacao !== true; }
+    if (b.ativo !== undefined) o.ativo = b.ativo === true;
+    if (b.ordem !== undefined) {
+      const v = parseInt(String(b.ordem), 10);
+      if (!(v >= 0 && v <= 1000)) e.ordem = 'Ordem de 0 a 1000.';
+      o.ordem = v;
+    }
+    return { e, o };
+  }
+
+  app.get('/api/admin/catalogo', naoConfigurado, exigeAdmin, async (_req, res) => {
+    try {
+      const rows = await db(
+        `select p.*, (select count(*)::int from financeiro.assinaturas a
+                       where a.plano_slug = p.slug and a.status <> 'CANCELADA') as contratacoes
+           from financeiro.planos p order by p.ordem, p.nome`,
+      );
+      res.json({ produtos: rows });
+    } catch (e) {
+      console.error('[fin/admin/catalogo]', (e as Error).message);
+      res.status(500).json({ error: 'erro_interno' });
+    }
+  });
+
+  app.post('/api/admin/catalogo', naoConfigurado, exigeAdmin, async (req, res) => {
+    try {
+      const { e, o } = lerPlano(req.body || {}, true);
+      if (Object.keys(e).length) return res.status(400).json({ error: 'dados_invalidos', campos: e });
+      const cols = Object.keys(o);
+      const [r] = await db(
+        `insert into financeiro.planos (${cols.join(',')}) values (${cols.map((_, i) => `$${i + 1}`).join(',')}) returning *`,
+        cols.map((c) => o[c]),
+      );
+      res.json({ produto: r });
+    } catch (e: any) {
+      if (e?.code === '23505') return res.status(409).json({ error: 'slug_ja_existe' });
+      console.error('[fin/admin/catalogo/post]', String(e?.message).slice(0, 200));
+      res.status(500).json({ error: 'erro_interno' });
+    }
+  });
+
+  // Editar produto: vale só para NOVAS contratações (contratos antigos guardam a foto do preço)
+  app.put('/api/admin/catalogo/:slug', naoConfigurado, exigeAdmin, async (req, res) => {
+    try {
+      if (!SLUG_RE.test(req.params.slug)) return res.status(400).json({ error: 'slug_invalido' });
+      const { e, o } = lerPlano({ ...(req.body || {}), slug: undefined }, false);
+      if (Object.keys(e).length) return res.status(400).json({ error: 'dados_invalidos', campos: e });
+      const cols = Object.keys(o);
+      if (!cols.length) return res.status(400).json({ error: 'nada_para_alterar' });
+      const sets = cols.map((c, i) => `${c} = $${i + 2}`).concat('updated_at = now()');
+      const rows = await db(`update financeiro.planos set ${sets.join(', ')} where slug = $1 returning *`, [req.params.slug, ...cols.map((c) => o[c])]);
+      if (!rows.length) return res.status(404).json({ error: 'produto_nao_encontrado' });
+      res.json({ produto: rows[0] });
+    } catch (e) {
+      console.error('[fin/admin/catalogo/put]', String((e as Error).message).slice(0, 200));
+      res.status(500).json({ error: 'erro_interno' });
+    }
+  });
+
+  // Aprovar uma contratação que aguardava (plano com aprovação): só então cria no Asaas
+  app.post('/api/admin/assinaturas/:id/aprovar', naoConfigurado, exigeAdmin, async (req, res) => {
+    try {
+      if (!/^[0-9a-f-]{36}$/.test(req.params.id)) return res.status(400).json({ error: 'id_invalido' });
+      const upd = await db(
+        "update financeiro.assinaturas set status = 'CRIANDO', updated_at = now() where id = $1 and status = 'AGUARDANDO_APROVACAO' returning id",
+        [req.params.id],
+      );
+      if (!upd.length) return res.status(409).json({ error: 'nao_esta_aguardando_aprovacao' });
+      try {
+        res.json({ ok: true, ...(await ativarAssinatura(req.params.id)) });
+      } catch (e: any) {
+        await db("update financeiro.assinaturas set status = 'ERRO', ultimo_erro = $2, updated_at = now() where id = $1", [req.params.id, String(e?.message || e).slice(0, 300)]);
+        console.error('[fin/aprovar]', String(e?.message || e).slice(0, 200));
+        res.status(502).json({ error: 'falha_ao_criar_no_asaas' });
+      }
+    } catch (e) {
+      console.error('[fin/aprovar]', (e as Error).message);
       res.status(500).json({ error: 'erro_interno' });
     }
   });

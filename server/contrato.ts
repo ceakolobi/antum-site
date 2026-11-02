@@ -75,3 +75,42 @@ export async function enviarEmailContrato(opts: {
   });
   if (!r.ok) throw new Error(`resend ${r.status}: ${(await r.text()).slice(0, 200)}`);
 }
+
+export type TipoAviso = 'nova' | 'paga' | 'vencida';
+
+const fmtBrl = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const fmtData = (iso: string) => String(iso).slice(0, 10).split('-').reverse().join('/');
+
+// Aviso por e-mail de cobrança (substitui as notificações pagas do Asaas). Texto simples, link direto da fatura.
+export async function enviarAvisoCobranca(opts: {
+  chave: string; base?: string; de: string; para: string; responderPara?: string;
+  tipo: TipoAviso; nome: string; plano: string; valor: number; vencimento: string; url: string | null;
+}): Promise<void> {
+  const v = fmtBrl(opts.valor);
+  const d = fmtData(opts.vencimento);
+  const botao = opts.url
+    ? `<p><a href="${esc(opts.url)}" style="display:inline-block;background:#0891b2;color:#fff;text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:bold">Ver cobrança e pagar</a></p>`
+    : '';
+  const textos: Record<TipoAviso, { assunto: string; corpo: string }> = {
+    nova: {
+      assunto: `Sua cobrança Antum — vence em ${d}`,
+      corpo: `<p>Segue a cobrança do plano <strong>${esc(opts.plano)}</strong>: <strong>${v}</strong>, com vencimento em <strong>${d}</strong>.</p>${botao}<p>Pelo link você paga por PIX ou boleto e pode baixar a 2ª via quando quiser.</p>`,
+    },
+    paga: {
+      assunto: 'Pagamento confirmado — Antum',
+      corpo: `<p>Recebemos o pagamento de <strong>${v}</strong> do plano <strong>${esc(opts.plano)}</strong>. Obrigado!</p>`,
+    },
+    vencida: {
+      assunto: `Cobrança vencida — Antum (${d})`,
+      corpo: `<p>A cobrança de <strong>${v}</strong> do plano <strong>${esc(opts.plano)}</strong>, com vencimento em <strong>${d}</strong>, continua em aberto.</p>${botao}<p>Se já pagou, desconsidere este aviso. Qualquer dúvida, é só responder este e-mail.</p>`,
+    },
+  };
+  const t = textos[opts.tipo];
+  const html = `<div style="font-family:Arial,sans-serif;font-size:15px;color:#222;line-height:1.5"><p>Olá, ${esc(opts.nome)}!</p>${t.corpo}<p>Equipe Antum</p></div>`;
+  const r = await fetch(`${opts.base || 'https://api.resend.com'}/emails`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${opts.chave}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from: opts.de, to: [opts.para], subject: t.assunto, html, reply_to: opts.responderPara || undefined }),
+  });
+  if (!r.ok) throw new Error(`resend ${r.status}: ${(await r.text()).slice(0, 200)}`);
+}

@@ -6,7 +6,7 @@ import pg from 'pg';
 import fs from 'fs';
 import path from 'path';
 import { registrarAdminAuth } from './adminAuth';
-import { renderContrato, gerarPdf, enviarEmailContrato } from './contrato';
+import { renderContrato, gerarPdf, enviarEmailContrato, enviarAvisoCobranca, type TipoAviso } from './contrato';
 
 const env = (k: string) => (process.env[k] || '').trim();
 
@@ -491,7 +491,10 @@ async function ativarAssinatura(assId: string) {
   try {
     const pgs = await asaas<any>('GET', `/subscriptions/${ass.asaas_subscription_id}/payments?limit=10`);
     const p = (pgs?.data || []).sort((a: any, b: any) => String(a.dueDate).localeCompare(String(b.dueDate)))[0];
-    if (p) { pagamentoUrl = p.invoiceUrl || p.bankSlipUrl || null; vencimento = p.dueDate; }
+    if (p) {
+      pagamentoUrl = p.invoiceUrl || p.bankSlipUrl || null; vencimento = p.dueDate;
+      await avisarCobranca('nova', cliente.id, p, ass.plano_nome);
+    }
   } catch { /* cobrança ainda não materializada: o webhook completa depois */ }
 
   await db("update financeiro.clientes set status_cadastro = 'CONCLUIDO', ultimo_erro = null, updated_at = now() where id = $1", [cliente.id]);
@@ -501,6 +504,37 @@ async function ativarAssinatura(assId: string) {
     aguardandoAprovacao: false, pagamentoUrl, vencimento, plano: ass.plano_nome, valor: Number(ass.valor),
     trialDias: trial, taxaImplantacao: Number(ass.taxa_implantacao),
   };
+}
+
+// ---------- avisos de cobrança por e-mail (uma vez por tipo e cobrança) -------
+async function avisarCobranca(tipo: TipoAviso, clienteId: string, p: any, plano: string) {
+  try {
+    const [cl] = await db('select nome, email from financeiro.clientes where id = $1', [clienteId]);
+    if (!cl || !p?.id) return;
+    const ins = await db(
+      'insert into financeiro.emails (cliente_id, tipo, destinatario, chave) values ($1,$2,$3,$4) on conflict (chave) do nothing returning id',
+      [clienteId, `aviso_${tipo}`, cl.email, `${tipo}:${p.id}`],
+    );
+    if (!ins.length) return; // já avisado
+    const chave = env('RESEND_API_KEY');
+    if (!chave) {
+      await db("update financeiro.emails set status = 'FALHA', erro = 'sem_chave_resend' where id = $1", [ins[0].id]);
+      return;
+    }
+    const [cfg] = await db("select valor from financeiro.config where chave = 'empresa_email'");
+    try {
+      await enviarAvisoCobranca({
+        chave, base: env('RESEND_BASE_URL') || undefined, de: env('EMAIL_FROM') || 'Antum <contratos@antum.com.br>',
+        para: cl.email, responderPara: (cfg?.valor || '').trim() || undefined, tipo, nome: cl.nome, plano,
+        valor: Number(p.value), vencimento: String(p.dueDate), url: p.invoiceUrl || p.bankSlipUrl || null,
+      });
+      await db("update financeiro.emails set status = 'ENVIADO', enviado_em = now(), tentativas = 1 where id = $1", [ins[0].id]);
+    } catch (e) {
+      await db("update financeiro.emails set status = 'FALHA', tentativas = 1, erro = $2 where id = $1", [ins[0].id, String((e as Error).message).slice(0, 300)]);
+    }
+  } catch (e) {
+    console.error('[fin/aviso]', String((e as Error).message).slice(0, 200));
+  }
 }
 
 // ---------- webhook -----------------------------------------------------------
@@ -521,6 +555,8 @@ async function aplicarEventoPagamento(ev: any) {
     const c = (await db('select id from financeiro.clientes where asaas_customer_id = $1', [p.customer]))[0];
     clienteId = c?.id ?? null;
   }
+  // A conta Asaas é compartilhada (Harmony e Antum): só guardamos cobranças de clientes da Antum.
+  if (!clienteId && !assinaturaId) return 'ignorado_outro_cliente';
   const original = p.originalValue != null ? Number(p.originalValue) : null;
   const pago = PAGOS.has(String(p.status));
   const multa = pago && original != null ? Math.max(0, Math.round((Number(p.value) - original) * 100) / 100) : 0;
@@ -548,6 +584,16 @@ async function aplicarEventoPagamento(ev: any) {
       pago ? (p.confirmedDate || p.paymentDate || quando) : null, quando,
     ],
   );
+  if (r.length && clienteId) {
+    const nomePlano = assinaturaId
+      ? (await db('select plano_nome from financeiro.assinaturas where id = $1', [assinaturaId]))[0]?.plano_nome
+      : null;
+    const plano = nomePlano || String(p.description || 'Antum').replace(/^Antum\s*[—-]\s*/, '');
+    const e = String(ev.event);
+    if (e === 'PAYMENT_CREATED') await avisarCobranca('nova', clienteId, p, plano);
+    else if (e === 'PAYMENT_RECEIVED' || e === 'PAYMENT_CONFIRMED') await avisarCobranca('paga', clienteId, p, plano);
+    else if (e === 'PAYMENT_OVERDUE') await avisarCobranca('vencida', clienteId, p, plano);
+  }
   return r.length ? 'aplicado' : 'ignorado_fora_de_ordem';
 }
 
@@ -634,6 +680,18 @@ export function registrarFinanceiro(app: Express) {
     const ev = req.body || {};
     if (!ev.id || !ev.event) return res.status(400).json({ error: 'evento_invalido' });
     try {
+      // Eventos de pagamento de quem não é cliente da Antum (ex.: Harmony) nem chegam a ser guardados
+      const pg = ev.payment;
+      if (String(ev.event).startsWith('PAYMENT_') && pg) {
+        const dono = (
+          await db(
+            `select 1 from financeiro.clientes where asaas_customer_id = $1
+             union all select 1 from financeiro.assinaturas where asaas_subscription_id = $2 limit 1`,
+            [String(pg.customer ?? ''), String(pg.subscription ?? '')],
+          )
+        ).length > 0;
+        if (!dono) return res.status(200).json({ received: true });
+      }
       const r = await db(
         'insert into financeiro.eventos (asaas_event_id, evento, payload) values ($1,$2,$3) on conflict (asaas_event_id) do nothing returning asaas_event_id',
         [String(ev.id), String(ev.event), JSON.stringify(ev)],

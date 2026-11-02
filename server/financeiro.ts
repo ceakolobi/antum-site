@@ -26,6 +26,8 @@ const SITE_URL = () => env('SITE_URL') || 'https://antum.com.br';
 const CONTRATO_VERSAO = 'contrato-v1-2026-10';
 const MULTA_FIXA = 5.22;
 const GRUPO_ASAAS = 'Sistemas';
+// O Asaas recusa multa fixa maior ou igual ao valor da cobrança (cobrança muito pequena): nesse caso, sem multa.
+const multaPara = (valor: number) => (valor > MULTA_FIXA ? { fine: { value: MULTA_FIXA, type: 'FIXED' } } : {});
 
 const usaSsl = () => {
   const f = env('FIN_DB_SSL').toLowerCase();
@@ -456,7 +458,7 @@ async function ativarAssinatura(assId: string) {
         cycle: 'MONTHLY',
         description: `Antum — ${ass.plano_nome}`,
         externalReference: ass.id,
-        fine: { value: MULTA_FIXA, type: 'FIXED' },
+        ...multaPara(Number(ass.valor)),
       });
     }
     if (sub?.nextDueDate) primeiroVenc = String(sub.nextDueDate);
@@ -478,7 +480,7 @@ async function ativarAssinatura(assId: string) {
         dueDate: primeiroVenc,
         description: `Antum — Implantação ${ass.plano_nome}`,
         externalReference: refImpl,
-        fine: { value: MULTA_FIXA, type: 'FIXED' },
+        ...multaPara(Number(ass.taxa_implantacao)),
       });
     }
   }

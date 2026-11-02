@@ -246,7 +246,7 @@ const FormBriefing: React.FC<{ id: string; onVoltar: () => void }> = ({ id, onVo
       ))}
 
       <Cartao titulo="Logo, fotos e arquivos">
-        <p className="text-sm text-slate-400 mb-3">Anexe a sua logo, fotos da empresa, produtos ou qualquer documento que ajude. Formatos: PNG, JPG, WEBP ou PDF, até 3 MB cada (máximo de 10 arquivos).</p>
+        <p className="text-sm text-slate-400 mb-3">Anexe a sua logo, as fotos dos serviços e qualquer documento que ajude. Dê nomes que expliquem o conteúdo (ex.: logo.png, instalacao-ar.jpg). Formatos: PNG, JPG, WEBP ou PDF, até 3 MB cada (máximo de 10 arquivos).</p>
         {b.arquivos.length > 0 && (
           <ul className="space-y-2 mb-4">
             {b.arquivos.map((a) => (

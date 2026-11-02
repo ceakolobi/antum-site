@@ -20,31 +20,14 @@ const EMPRESA: Secao = { titulo: 'Sobre a empresa', campos: [
   l('diferenciais', 'Quais são seus diferenciais? Por que escolhem você?'),
   l('publico', 'Quem são os seus clientes? (público que você quer atingir)'),
 ] };
-const SERVICOS: Secao = { titulo: 'Serviços e textos', campos: [
-  l('servicos', 'Liste seus principais serviços ou produtos (um por linha)', { obrigatorio: true }),
-  l('sobre_nos', 'Texto "Sobre nós" (se já tiver)', { ajuda: 'Se não tiver, escrevemos com base no que você contou acima.' }),
-] };
-const CONTATO: Secao = { titulo: 'Contato e redes sociais', campos: [
-  t('whatsapp', 'WhatsApp (com DDD)', { obrigatorio: true }),
-  t('email_contato', 'E-mail de contato que aparece no site', { obrigatorio: true }),
-  t('telefone', 'Telefone fixo (opcional)'),
-  t('endereco', 'Endereço completo (se quiser mostrar)'),
-  t('horario', 'Horário de atendimento'),
-  t('instagram', 'Instagram (link ou @)'),
-  t('facebook', 'Facebook (link)'),
-  t('outras_redes', 'Outras redes (TikTok, YouTube, LinkedIn…)'),
-] };
 const VISUAL: Secao = { titulo: 'Visual e domínio', campos: [
-  t('cores', 'Cores que você gosta ou usa na marca'),
+  t('cores', 'Cores que você gosta ou usa na marca', { ajuda: 'Ex.: azul-marinho, azul e branco' }),
+  l('orientacoes_visuais', 'Orientações visuais', { ajuda: 'Ex.: alternar fundos brancos e escuros, ícones discretos, usar fotos reais dos serviços, tipografia moderna e legível.' }),
   e('estilo', 'Estilo desejado', ['Moderno e limpo', 'Elegante', 'Colorido e jovem', 'Sério e corporativo', 'Não sei, podem escolher']),
   l('referencias', 'Sites que você gosta (cole 2 ou 3 links)'),
   e('logo_info', 'Sobre a logo', ['Tenho logo (vou anexar abaixo)', 'Preciso de uma logo']),
   e('tem_dominio', 'Domínio (endereço do site)', ['Já tenho', 'Ainda não tenho', 'Não sei']),
   t('dominio', 'Qual domínio? (ex.: minhaempresa.com.br)', { ajuda: 'O domínio é pago por você, direto no site de registro.' }),
-] };
-const PAGINAS: Secao = { titulo: 'Páginas e observações', campos: [
-  l('paginas', 'Quais páginas você quer?', { ajuda: 'Ex.: Início, Serviços, Sobre, Galeria, Contato' }),
-  l('observacoes', 'Mais alguma coisa que devemos saber?'),
 ] };
 const LOJA: Secao = { titulo: 'Loja virtual', campos: [
   l('categorias', 'Categorias de produtos', { obrigatorio: true }),
@@ -80,15 +63,85 @@ const GERAL: Secao = { titulo: 'O que você precisa', campos: [
   l('observacoes', 'Mais alguma coisa que devemos saber?'),
 ] };
 
+
+// Roteiro completo de um site institucional (menu, banner, quem somos, serviços, segmentos, diferenciais, benefícios,
+// serviços em ação, compromisso, contato, rodapé). O cliente preenche cada parte; o que ficar em branco a Antum escreve.
+const SITE: Secao[] = [
+  { titulo: '1. Identidade e menu', campos: [
+    t('nome_fantasia', 'Nome da empresa (como quer aparecer)', { obrigatorio: true }),
+    t('slogan', 'Frase que resume a empresa (embaixo do nome)', { ajuda: 'Ex.: Climatização • Manutenção • Serviços Prediais' }),
+    t('ramo', 'Ramo de atuação', { obrigatorio: true, ajuda: 'Ex.: salão de beleza, oficina mecânica, escritório de contabilidade' }),
+    t('cidade_atuacao', 'Cidade/região em que atua'),
+    t('menu_itens', 'Itens do menu do site', { ajuda: 'Ex.: Home | Quem somos | Serviços | Segmentos | Diferenciais | Contato' }),
+    t('botao_principal', 'Texto do botão principal', { ajuda: 'Ex.: Solicitar orçamento, Agendar horário, Falar no WhatsApp' }),
+  ] },
+  { titulo: '2. Banner principal (a primeira tela do site)', campos: [
+    t('banner_etiqueta', 'Etiqueta pequena acima do título', { ajuda: 'Ex.: SOLUÇÕES INTELIGENTES' }),
+    t('banner_titulo', 'Título principal', { ajuda: 'Ex.: Soluções inteligentes para empresas e condomínios' }),
+    l('banner_subtitulo', 'Frase de apoio abaixo do título'),
+    l('compromissos', 'Seus compromissos (até 4, um por linha)', { ajuda: 'Formato: Título: frase. Ex.: Qualidade: serviços realizados com excelência.' }),
+    t('banner_botoes', 'Botões do banner', { ajuda: 'Ex.: Solicitar orçamento | Falar no WhatsApp' }),
+  ] },
+  { titulo: '3. Quem somos', campos: [
+    l('descricao', 'Texto "Quem somos": o que a empresa faz e como trabalha', { obrigatorio: true }),
+    t('missao', 'Missão (uma frase)'),
+    t('visao', 'Visão (uma frase)'),
+    t('valores', 'Valores', { ajuda: 'Ex.: Ética, compromisso, qualidade, segurança e respeito' }),
+    l('publico', 'Quem são os seus clientes?'),
+  ] },
+  { titulo: '4. Nossas soluções (serviços)', campos: [
+    l('servicos', 'Seus serviços ou produtos', { obrigatorio: true, ajuda: 'Pode separar por categorias: escreva o nome da categoria e, embaixo, os serviços (um por linha).' }),
+    l('destaque_servicos', 'Frase de destaque da seção de serviços'),
+  ] },
+  { titulo: '5. Segmentos atendidos', campos: [
+    l('segmentos', 'Tipos de cliente que você atende (um por linha)', { ajuda: 'Formato: Segmento — descrição. Ex.: Condomínios — manutenção de áreas comuns e equipamentos.' }),
+    t('frase_segmentos', 'Frase de apoio da seção'),
+  ] },
+  { titulo: '6. Diferenciais', campos: [
+    l('diferenciais', 'Seus diferenciais (até 6, um por linha)', { ajuda: 'Formato: Título — descrição. Ex.: Atendimento ágil — equipe pronta para atender com rapidez.' }),
+  ] },
+  { titulo: '7. Benefícios para o cliente', campos: [
+    t('beneficios_titulo', 'Título da seção', { ajuda: 'Ex.: Por que investir em manutenção preventiva?' }),
+    l('beneficios', 'Lista de benefícios (um por linha)', { ajuda: 'Ex.: Reduz custos futuros. Evita falhas inesperadas.' }),
+    l('beneficios_destaque', 'Frase de destaque'),
+    t('beneficios_botao', 'Texto do botão da seção', { ajuda: 'Ex.: Solicitar avaliação técnica' }),
+  ] },
+  { titulo: '8. Serviços em ação (cards com fotos)', campos: [
+    l('servicos_acao', 'Cards da galeria (um por linha)', { ajuda: 'Formato: Título — descrição. Anexe as fotos na área de arquivos, no fim da página, com nomes que ajudem (ex.: instalacao-ar.jpg).' }),
+    t('frase_acao', 'Frase de destaque da seção', { ajuda: 'Ex.: Pequenos reparos, grandes soluções.' }),
+  ] },
+  { titulo: '9. Nosso compromisso', campos: [
+    l('compromisso_texto', 'Texto do compromisso da empresa'),
+    l('compromisso_valores', 'Valores com uma frase cada (um por linha)', { ajuda: 'Formato: Valor — frase. Ex.: Ética — atuação pautada pelo respeito.' }),
+  ] },
+  { titulo: '10. Contato', campos: [
+    t('whatsapp', 'WhatsApp (com DDD)', { obrigatorio: true }),
+    t('email_contato', 'E-mail de contato que aparece no site', { obrigatorio: true }),
+    t('telefone', 'Telefone fixo (opcional)'),
+    t('instagram', 'Instagram (link ou @)'),
+    t('facebook', 'Facebook (link)'),
+    t('outras_redes', 'Outras redes (TikTok, YouTube, LinkedIn…)'),
+    t('endereco', 'Endereço completo (se quiser mostrar)'),
+    t('horario', 'Horário de atendimento'),
+    l('form_servicos', 'Serviços que aparecem para escolher no formulário de contato'),
+    t('form_destino', 'Para onde enviar as mensagens do formulário? (e-mail ou WhatsApp)'),
+  ] },
+  { titulo: '11. Rodapé', campos: [
+    l('rodape_texto', 'Algo especial para o rodapé? (CNPJ, frase, links)'),
+  ] },
+  VISUAL,
+  { titulo: 'Observações finais', campos: [l('observacoes', 'Mais alguma coisa que devemos saber?')] },
+];
+
 // Plano -> modelo. Marina SDR tem integração própria (sem briefing aqui).
 export function modeloPara(slug: string | null): Modelo | null {
   switch (slug) {
     case 'marina-sdr': return null;
-    case 'site-profissional': return { tipo: 'site', titulo: 'Informações para o seu site', secoes: [EMPRESA, SERVICOS, CONTATO, VISUAL, PAGINAS] };
-    case 'site-vera': return { tipo: 'site-vera', titulo: 'Informações para o seu site e a atendente de IA', secoes: [EMPRESA, SERVICOS, CONTATO, VISUAL, PAGINAS, VERA] };
-    case 'loja-vera': return { tipo: 'loja', titulo: 'Informações para a sua loja virtual', secoes: [EMPRESA, SERVICOS, LOJA, CONTATO, VISUAL, PAGINAS, VERA] };
-    case 'site-crm-vera': return { tipo: 'site-crm', titulo: 'Informações para o site, o CRM e a atendente de IA', secoes: [EMPRESA, SERVICOS, CONTATO, VISUAL, PAGINAS, CRM, VERA] };
-    case 'site-sistema-vera': return { tipo: 'site-sistema', titulo: 'Informações para o site, o sistema e a atendente de IA', secoes: [EMPRESA, SERVICOS, CONTATO, VISUAL, PAGINAS, CRM, SISTEMA, VERA] };
+    case 'site-profissional': return { tipo: 'site', titulo: 'Informações para o seu site', secoes: SITE };
+    case 'site-vera': return { tipo: 'site-vera', titulo: 'Informações para o seu site e a atendente de IA', secoes: [...SITE, VERA] };
+    case 'loja-vera': return { tipo: 'loja', titulo: 'Informações para a sua loja virtual', secoes: [...SITE, LOJA, VERA] };
+    case 'site-crm-vera': return { tipo: 'site-crm', titulo: 'Informações para o site, o CRM e a atendente de IA', secoes: [...SITE, CRM, VERA] };
+    case 'site-sistema-vera': return { tipo: 'site-sistema', titulo: 'Informações para o site, o sistema e a atendente de IA', secoes: [...SITE, CRM, SISTEMA, VERA] };
     case 'crm-antum': return { tipo: 'crm', titulo: 'Informações para o seu CRM', secoes: [EMPRESA, CRM] };
     default: return { tipo: 'geral', titulo: 'Informações do seu projeto', secoes: [GERAL] };
   }

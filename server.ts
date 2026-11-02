@@ -9,7 +9,10 @@ const app = express();
 const PORT = parseInt(process.env.PORT || '3000', 10);
 
 app.disable('x-powered-by');
-app.use(express.json({ limit: '20kb' }));
+// 20 KB para o site todo; o briefing do cliente (textos longos) aceita mais. Arquivos vão em corpo bruto, fora do JSON.
+const jsonPadrao = express.json({ limit: '20kb' });
+const jsonBriefing = express.json({ limit: '300kb' });
+app.use((req, res, next) => (req.path.startsWith('/api/cliente/briefing') ? jsonBriefing(req, res, next) : jsonPadrao(req, res, next)));
 
 // Cabeçalhos de segurança em todo o site (a CSP estrita fica só na landing /marina-sdr)
 app.use((req, res, next) => {

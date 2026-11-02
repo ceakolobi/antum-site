@@ -7,6 +7,7 @@ import fs from 'fs';
 import path from 'path';
 import { registrarAdminAuth } from './adminAuth';
 import { registrarAreaCliente } from './clienteAuth';
+import { registrarBriefing } from './briefing';
 import { renderContrato, gerarPdf, enviarEmailContrato, enviarAvisoCobranca, enviarEmailAcesso, type TipoAviso } from './contrato';
 
 const env = (k: string) => (process.env[k] || '').trim();
@@ -539,6 +540,19 @@ async function avisarCobranca(tipo: TipoAviso, clienteId: string, p: any, plano:
   }
 }
 
+// Aviso interno para a equipe da Antum (e-mail de contato configurado na aba Empresa). Sem e-mail configurado, não envia.
+async function avisarEquipe(assunto: string, html: string) {
+  const chave = env('RESEND_API_KEY');
+  const [cfg] = await db("select valor from financeiro.config where chave = 'empresa_email'");
+  const para = (cfg?.valor || '').trim();
+  if (!chave || !para) return;
+  await fetch(`${env('RESEND_BASE_URL') || 'https://api.resend.com'}/emails`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${chave}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from: env('EMAIL_FROM') || 'Antum <contratos@antum.com.br>', to: [para], subject: assunto, html }),
+  });
+}
+
 // ---------- área do cliente: link de acesso por e-mail e sincronização de cobranças ----
 let emitirLinkAcesso: ((email: string, tipo: 'definir' | 'reset') => Promise<{ id: string; nome: string; email: string; token: string } | null>) | null = null;
 
@@ -660,11 +674,15 @@ export function registrarFinanceiro(app: Express) {
 
   // Login do administrador (e-mail + senha, sessão em cookie, auditoria)
   const { exigeAdmin, auditar } = registrarAdminAuth(app, { db, str, sha256, limite, ipDe, origemOk, naoConfigurado });
-  emitirLinkAcesso = registrarAreaCliente(
+  const area = registrarAreaCliente(
     app,
     { db, str, sha256, limite, ipDe, origemOk, naoConfigurado },
     { sincronizar: sincronizarCobrancas, enviarLink: enviarLinkAcesso },
-  ).emitirLink;
+  );
+  emitirLinkAcesso = area.emitirLink;
+  registrarBriefing(app, { db, str, sha256, limite, ipDe, origemOk, naoConfigurado }, {
+    exigeCliente: area.exigeCliente, exigeAdmin, auditar, avisarEquipe,
+  });
   const quem = (res: Response) => String(res.locals.admin?.email || '');
 
   // Catálogo público: só produtos ativos, direto do banco (nenhum preço fixo no código)
@@ -821,7 +839,8 @@ export function registrarFinanceiro(app: Express) {
                    (select count(*)::int from financeiro.assinaturas a where a.cliente_id = c.id and a.bloqueada and a.status <> 'CANCELADA') as bloqueadas
               from financeiro.clientes c order by c.created_at desc limit 300`),
         db(`select a.id, a.plano_slug, a.plano_nome, a.valor, a.taxa_implantacao, a.trial_dias, a.vencimento_dia,
-                   a.forma_pagamento, a.status, a.bloqueada, a.ultimo_erro, a.created_at, c.nome as cliente, c.email as cliente_email
+                   a.forma_pagamento, a.status, a.bloqueada, a.ultimo_erro, a.created_at, c.nome as cliente, c.email as cliente_email,
+                   (select b.status from financeiro.briefings b where b.assinatura_id = a.id) as briefing_status
               from financeiro.assinaturas a join financeiro.clientes c on c.id = a.cliente_id
              order by (a.status = 'AGUARDANDO_APROVACAO') desc, a.created_at desc limit 300`),
         db(`select b.id, b.valor, b.vencimento, b.status, b.forma_pagamento, b.invoice_url, b.pago_em, c.nome as cliente
@@ -852,7 +871,8 @@ export function registrarFinanceiro(app: Express) {
       if (!cliente) return res.status(404).json({ error: 'cliente_nao_encontrado' });
       const assinaturas = await db(
         `select a.id, a.plano_nome, a.valor, a.taxa_implantacao, a.trial_dias, a.vencimento_dia, a.forma_pagamento, a.status,
-                a.bloqueada, a.bloqueada_em, a.bloqueio_motivo, a.created_at,
+                a.bloqueada, a.bloqueada_em, a.bloqueio_motivo, a.created_at, a.plano_slug,
+                (select b.status from financeiro.briefings b where b.assinatura_id = a.id) as briefing_status,
                 exists(select 1 from financeiro.contratos k where k.assinatura_id = a.id) as tem_contrato
            from financeiro.assinaturas a where a.cliente_id = $1 order by a.created_at desc`, [req.params.id]);
       const cobrancas = await db(

@@ -8,7 +8,7 @@ interface Resumo {
   recebido_total: string; a_receber: string; bloqueadas: number;
 }
 interface Cliente { id: string; nome: string; tipo: string; email: string; celular: string; cpf_cnpj: string; cidade: string; uf: string; status_cadastro: string; ultimo_erro: string | null; created_at: string; bloqueadas: number }
-interface Assinatura { id: string; plano_slug: string | null; plano_nome: string; valor: string; taxa_implantacao: string; trial_dias: number; vencimento_dia: number; forma_pagamento: string; status: string; bloqueada: boolean; ultimo_erro: string | null; created_at: string; cliente: string; cliente_email: string }
+interface Assinatura { id: string; plano_slug: string | null; plano_nome: string; valor: string; taxa_implantacao: string; trial_dias: number; vencimento_dia: number; forma_pagamento: string; status: string; bloqueada: boolean; briefing_status: string | null; ultimo_erro: string | null; created_at: string; cliente: string; cliente_email: string }
 interface Cobranca { id: string; valor: string; vencimento: string; status: string; forma_pagamento: string | null; invoice_url: string | null; pago_em: string | null; cliente: string | null }
 interface Auditoria { quando: string; admin_email: string | null; acao: string; detalhe: any; ip: string | null }
 interface Painel { resumo: Resumo; clientes: Cliente[]; assinaturas: Assinatura[]; cobrancas: Cobranca[]; auditoria: Auditoria[]; asaasBase: 'sandbox' | 'producao' }
@@ -295,7 +295,7 @@ interface Ficha {
     numero: string; complemento: string | null; bairro: string; cidade: string; uf: string; status_cadastro: string; aceite_em: string | null;
     aceite_ip: string | null; created_at: string; ultimo_login_em: string | null; tem_senha: boolean;
   };
-  assinaturas: { id: string; plano_nome: string; valor: string; taxa_implantacao: string; trial_dias: number; vencimento_dia: number; forma_pagamento: string; status: string; bloqueada: boolean; bloqueada_em: string | null; bloqueio_motivo: string | null; tem_contrato: boolean }[];
+  assinaturas: { id: string; plano_slug: string | null; briefing_status: string | null; plano_nome: string; valor: string; taxa_implantacao: string; trial_dias: number; vencimento_dia: number; forma_pagamento: string; status: string; bloqueada: boolean; bloqueada_em: string | null; bloqueio_motivo: string | null; tem_contrato: boolean }[];
   cobrancas: { valor: string; vencimento: string; status: string; forma_pagamento: string | null; invoice_url: string | null; pago_em: string | null }[];
 }
 
@@ -304,11 +304,77 @@ const CAMPOS_EDIT: [string, string][] = [
   ['endereco', 'Endereço'], ['numero', 'Número'], ['complemento', 'Complemento'], ['bairro', 'Bairro'], ['cidade', 'Cidade'], ['uf', 'UF'],
 ];
 
+// ---------- briefing do projeto (o que o cliente enviou: textos, logo, fotos) ----------
+const ROTULO_BRIEFING: Record<string, string> = {
+  PENDENTE: 'Cliente ainda não preencheu', RASCUNHO: 'Rascunho (não enviado)', ENVIADO: 'Enviado pelo cliente', EM_PRODUCAO: 'Em produção', CONCLUIDO: 'Concluído',
+};
+interface BriefingAdm {
+  plano_nome: string; status: string; dados: Record<string, string>; enviado_em: string | null; updated_at: string | null;
+  modelo: { titulo: string; secoes: { titulo: string; campos: { id: string; rotulo: string }[] }[] };
+  arquivos: { id: string; nome: string; mime: string; tamanho: number }[];
+}
+const BriefingAdmin: React.FC<{ aid: string; aoMudar: () => void }> = ({ aid, aoMudar }) => {
+  const [b, setB] = useState<BriefingAdm | null>(null);
+  const [msg, setMsg] = useState('');
+  const carregar = useCallback(async () => {
+    const r = await api<BriefingAdm>(`/api/admin/briefing/${aid}`);
+    if (r.ok) setB(r.data); else setMsg('Não foi possível carregar o briefing.');
+  }, [aid]);
+  useEffect(() => { carregar(); }, [carregar]);
+  const mudar = async (status: string) => {
+    const r = await api(`/api/admin/briefing/${aid}/status`, { method: 'POST', body: { status } });
+    setMsg(r.ok ? 'Situação atualizada.' : r.status === 404 ? 'O cliente ainda não começou o briefing.' : 'Não foi possível atualizar.');
+    await carregar(); aoMudar();
+  };
+  if (msg && !b) return <p className="text-sm text-red-300 mt-2">{msg}</p>;
+  if (!b) return <p className="text-sm text-slate-500 mt-2 flex gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Carregando…</p>;
+  const kbs = (n: number) => (n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
+  return (
+    <div className="mt-3 rounded-xl border border-slate-700 p-4 space-y-4 text-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="font-bold text-white">{b.modelo.titulo} — <span className="text-cyan-300">{ROTULO_BRIEFING[b.status] || b.status}</span>{b.enviado_em ? ` (enviado em ${dataHora(b.enviado_em)})` : ''}</p>
+        <div className="no-print flex flex-wrap gap-2">
+          {b.status !== 'PENDENTE' && b.status !== 'EM_PRODUCAO' && <button className={btnSec} onClick={() => mudar('EM_PRODUCAO')}>Marcar em produção</button>}
+          {b.status === 'EM_PRODUCAO' && <button className={btnSec} onClick={() => mudar('CONCLUIDO')}>Marcar concluído</button>}
+          {(b.status === 'EM_PRODUCAO' || b.status === 'CONCLUIDO') && <button className={btnSec} onClick={() => mudar('ENVIADO')}>Reabrir para o cliente</button>}
+        </div>
+      </div>
+      {msg && <p className="no-print text-xs text-emerald-300">{msg}</p>}
+      {b.modelo.secoes.map((sec) => {
+        const preenchidos = sec.campos.filter((c) => b.dados[c.id]);
+        return (
+          <div key={sec.titulo}>
+            <h4 className="font-semibold text-slate-200 mb-1">{sec.titulo}</h4>
+            {preenchidos.length === 0 ? <p className="text-xs text-slate-500">Sem respostas nesta parte.</p> : (
+              <dl className="space-y-2">
+                {preenchidos.map((c) => (
+                  <div key={c.id}><dt className="text-xs text-slate-500">{c.rotulo}</dt><dd className="text-white whitespace-pre-wrap break-words">{b.dados[c.id]}</dd></div>
+                ))}
+              </dl>
+            )}
+          </div>
+        );
+      })}
+      <div>
+        <h4 className="font-semibold text-slate-200 mb-1">Arquivos enviados</h4>
+        {b.arquivos.length === 0 ? <p className="text-xs text-slate-500">Nenhum arquivo.</p> : (
+          <ul className="space-y-1.5">
+            {b.arquivos.map((a) => (
+              <li key={a.id}><a className="text-cyan-300 underline" href={`/api/admin/briefing/${aid}/arquivo/${a.id}`}>{a.nome}</a> <span className="text-xs text-slate-500">({kbs(a.tamanho)})</span></li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const FichaCliente: React.FC<{ id: string; editarInicial?: boolean; onFechar: () => void; onMudou: () => void }> = ({ id, editarInicial, onFechar, onMudou }) => {
   const [f, setF] = useState<Ficha | null>(null);
   const [editando, setEditando] = useState(false);
   const [form, setForm] = useState<Record<string, string>>({});
   const [msg, setMsg] = useState<{ ok: boolean; t: string } | null>(null);
+  const [verBriefing, setVerBriefing] = useState<string | null>(null);
 
   const carregar = useCallback(async () => {
     const r = await api<Ficha>(`/api/admin/clientes/${id}`);
@@ -393,11 +459,13 @@ const FichaCliente: React.FC<{ id: string; editarInicial?: boolean; onFechar: ()
                         {a.bloqueada && <p className="text-xs text-red-300">Bloqueado em {a.bloqueada_em ? dataHora(a.bloqueada_em) : '—'}{a.bloqueio_motivo ? ` — ${a.bloqueio_motivo}` : ''}</p>}
                       </div>
                       <div className="no-print flex gap-2">
+                        {a.plano_slug !== 'marina-sdr' && <button className={btnSec} onClick={() => setVerBriefing(verBriefing === a.id ? null : a.id)}>Briefing{a.briefing_status ? ` · ${ROTULO_BRIEFING[a.briefing_status] || a.briefing_status}` : ''}</button>}
                         {a.tem_contrato && <a className={btnSec} href={`/api/admin/contratos/${a.id}/pdf`} target="_blank" rel="noopener noreferrer">Contrato PDF</a>}
                         {a.status !== 'CANCELADA' && (a.bloqueada
                           ? <button className={btnSec} onClick={() => bloqueio(a.id, false)}>Desbloquear</button>
                           : <button className="px-3 py-1.5 rounded-lg border border-red-500/60 hover:border-red-400 text-red-300 text-xs font-semibold" onClick={() => bloqueio(a.id, true)}>Bloquear</button>)}
                       </div>
+                      {verBriefing === a.id && <div className="basis-full"><BriefingAdmin aid={a.id} aoMudar={() => { carregar(); onMudou(); }} /></div>}
                     </li>
                   ))}
                 </ul>
@@ -613,7 +681,7 @@ export const AdminPage: React.FC = () => {
                 <td className="px-3 py-2 whitespace-nowrap">{Number(a.taxa_implantacao) > 0 ? brl(a.taxa_implantacao) : '—'}</td>
                 <td className="px-3 py-2">{a.trial_dias > 0 ? `${a.trial_dias} dias` : '—'}</td>
                 <td className="px-3 py-2">dia {a.vencimento_dia}</td>
-                <td className="px-3 py-2"><Selo texto={STATUS_ASS[a.status] || a.status} />{a.bloqueada && <span className="ml-1 px-2 py-0.5 rounded-full text-xs font-semibold text-red-300 bg-red-500/10">Bloqueado</span>}{a.ultimo_erro && <div className="text-xs text-red-300 mt-1 max-w-[220px]">{a.ultimo_erro}</div>}</td>
+                <td className="px-3 py-2"><Selo texto={STATUS_ASS[a.status] || a.status} />{a.bloqueada && <span className="ml-1 px-2 py-0.5 rounded-full text-xs font-semibold text-red-300 bg-red-500/10">Bloqueado</span>}{a.briefing_status === 'ENVIADO' && <span className="ml-1 px-2 py-0.5 rounded-full text-xs font-semibold text-cyan-300 bg-cyan-500/10">Briefing enviado</span>}{a.ultimo_erro && <div className="text-xs text-red-300 mt-1 max-w-[220px]">{a.ultimo_erro}</div>}</td>
                 <td className="px-3 py-2 whitespace-nowrap space-x-2">
                   {a.status === 'AGUARDANDO_APROVACAO' && <button className={btn} disabled={ocupado === a.id} onClick={() => aprovar(a.id)}>{ocupado === a.id ? 'Criando…' : 'Aprovar'}</button>}
                   <a className={btnSec} href={`/api/admin/contratos/${a.id}/pdf`} target="_blank" rel="noopener noreferrer">Contrato PDF</a>

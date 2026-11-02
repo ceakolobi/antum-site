@@ -226,5 +226,5 @@ export function registrarAreaCliente(app: Express, h: Ajudantes, x: ExtrasClient
     }
   });
 
-  return { emitirLink };
+  return { emitirLink, exigeCliente };
 }

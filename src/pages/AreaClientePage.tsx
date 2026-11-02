@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { SenhaInput } from '../components/SenhaInput';
 import { Link } from '../router/Link';
 import { useRouter } from '../router/RouterContext';
-import { Wallet, UserRound, LogOut, Loader2, FileText, ExternalLink, ShieldCheck } from 'lucide-react';
+import { Wallet, UserRound, LogOut, Loader2, FileText, ExternalLink, ShieldCheck, ClipboardList, Upload, Trash2, Download } from 'lucide-react';
 
 async function api<T = any>(path: string, body?: unknown): Promise<{ ok: boolean; status: number; data: T }> {
   try {
@@ -143,6 +143,164 @@ const Login: React.FC<{ aoEntrar: () => void }> = ({ aoEntrar }) => {
   );
 };
 
+// ---------- meu projeto (briefing): o cliente conta o que precisa e envia logo, fotos e arquivos ----------
+interface CampoB { id: string; rotulo: string; tipo: 'texto' | 'longo' | 'escolha'; obrigatorio?: boolean; ajuda?: string; opcoes?: string[] }
+interface Projeto { id: string; plano_nome: string; status: string }
+interface BriefingDados {
+  plano_nome: string; status: string; dados: Record<string, string>; enviado_em: string | null;
+  modelo: { titulo: string; secoes: { titulo: string; campos: CampoB[] }[] };
+  arquivos: { id: string; nome: string; mime: string; tamanho: number }[];
+}
+const STATUS_PROJ: Record<string, { t: string; c: string }> = {
+  PENDENTE: { t: 'Falta preencher', c: 'text-amber-300 bg-amber-500/10' },
+  RASCUNHO: { t: 'Rascunho salvo', c: 'text-amber-300 bg-amber-500/10' },
+  ENVIADO: { t: 'Enviado à Antum', c: 'text-cyan-300 bg-cyan-500/10' },
+  EM_PRODUCAO: { t: 'Em produção', c: 'text-emerald-300 bg-emerald-500/10' },
+  CONCLUIDO: { t: 'Concluído', c: 'text-emerald-300 bg-emerald-500/10' },
+};
+const MSG_B: Record<string, string> = {
+  tipo_nao_aceito: 'Formato não aceito. Envie PNG, JPG, WEBP ou PDF.',
+  arquivo_grande: 'Arquivo muito grande (máximo 3 MB).',
+  limite_de_arquivos: 'Limite de 10 arquivos. Remova algum para enviar outro.',
+  projeto_em_producao: 'Seu projeto já está em produção e não pode mais ser alterado aqui. Fale com a Antum.',
+  campos_obrigatorios: 'Preencha os campos obrigatórios antes de enviar.',
+};
+const kb = (n: number) => (n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
+
+const FormBriefing: React.FC<{ id: string; onVoltar: () => void }> = ({ id, onVoltar }) => {
+  const [b, setB] = useState<BriefingDados | null>(null);
+  const [v, setV] = useState<Record<string, string>>({});
+  const [msg, setMsg] = useState<{ ok: boolean; t: string } | null>(null);
+  const [falta, setFalta] = useState<string[]>([]);
+  const [ocupado, setOcupado] = useState(false);
+
+  const carregar = useCallback(async () => {
+    const r = await api<BriefingDados>(`/api/cliente/briefing/${id}`);
+    if (r.ok) { setB(r.data); setV(r.data.dados || {}); } else setMsg({ ok: false, t: 'Não foi possível carregar o projeto.' });
+  }, [id]);
+  useEffect(() => { carregar(); }, [carregar]);
+
+  const travado = b?.status === 'EM_PRODUCAO' || b?.status === 'CONCLUIDO';
+  const salvar = async () => {
+    setOcupado(true); setMsg(null);
+    const res = await fetch(`/api/cliente/briefing/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dados: v }) });
+    setOcupado(false);
+    const d = await res.json().catch(() => ({}));
+    if (res.ok) { setMsg({ ok: true, t: 'Rascunho salvo.' }); await carregar(); } else setMsg({ ok: false, t: MSG_B[d.error] || 'Não foi possível salvar.' });
+  };
+  const enviar = async () => {
+    setOcupado(true); setMsg(null); setFalta([]);
+    const r = await api(`/api/cliente/briefing/${id}/enviar`, { dados: v });
+    setOcupado(false);
+    if (r.ok) { setMsg({ ok: true, t: 'Enviado! A Antum já recebeu as suas informações e vai começar a produção.' }); await carregar(); }
+    else { setMsg({ ok: false, t: MSG_B[r.data?.error] || 'Não foi possível enviar.' }); if (r.data?.faltando) setFalta(r.data.faltando); }
+  };
+  const anexar = async (arqs: FileList | null) => {
+    if (!arqs?.length) return;
+    setOcupado(true); setMsg(null);
+    for (const f of Array.from(arqs)) {
+      const res = await fetch(`/api/cliente/briefing/${id}/arquivo`, {
+        method: 'POST', headers: { 'Content-Type': 'application/octet-stream', 'x-nome-arquivo': encodeURIComponent(f.name) }, body: f,
+      });
+      if (!res.ok) { const d = await res.json().catch(() => ({})); setMsg({ ok: false, t: `${f.name}: ${MSG_B[res.status === 413 ? 'arquivo_grande' : d.error] || 'não foi possível enviar.'}` }); break; }
+    }
+    setOcupado(false); await carregar();
+  };
+  const remover = async (fid: string) => {
+    if (!window.confirm('Remover este arquivo?')) return;
+    await fetch(`/api/cliente/briefing/${id}/arquivo/${fid}`, { method: 'DELETE' });
+    await carregar();
+  };
+
+  if (!b) return <p className="text-sm text-slate-500 flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Carregando…</p>;
+  const st = STATUS_PROJ[b.status] || STATUS_PROJ.PENDENTE;
+  return (
+    <div className="space-y-5">
+      <button className="text-sm text-cyan-400 underline" onClick={onVoltar}>← Voltar</button>
+      <div>
+        <h2 className="text-lg font-bold text-white">{b.modelo.titulo}</h2>
+        <p className="text-xs text-slate-400 mt-1">Plano {b.plano_nome} · <span className={`px-2 py-0.5 rounded-full font-semibold ${st.c}`}>{st.t}</span></p>
+        <p className="text-sm text-slate-400 mt-3">Quanto mais você contar, melhor fica o resultado. Pode salvar como rascunho e continuar depois. Campos com * são obrigatórios.</p>
+      </div>
+      {travado && <p className="text-sm text-amber-300">Seu projeto já está em produção, então esta tela é só de consulta. Para mudar algo, fale com a Antum.</p>}
+      {b.modelo.secoes.map((sec) => (
+        <Cartao key={sec.titulo} titulo={sec.titulo}>
+          <div className="space-y-4">
+            {sec.campos.map((c) => (
+              <div key={c.id}>
+                <label className={rotulo}>{c.rotulo}{c.obrigatorio && ' *'}</label>
+                {c.tipo === 'longo' ? (
+                  <textarea className={campo} rows={4} maxLength={3000} disabled={travado} value={v[c.id] || ''} onChange={(e) => setV((x) => ({ ...x, [c.id]: e.target.value }))} />
+                ) : c.tipo === 'escolha' ? (
+                  <select className={campo} disabled={travado} value={v[c.id] || ''} onChange={(e) => setV((x) => ({ ...x, [c.id]: e.target.value }))}>
+                    <option value="">— escolher —</option>{c.opcoes?.map((o) => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                ) : (
+                  <input className={campo} maxLength={300} disabled={travado} value={v[c.id] || ''} onChange={(e) => setV((x) => ({ ...x, [c.id]: e.target.value }))} />
+                )}
+                {c.ajuda && <p className="text-xs text-slate-500 mt-1">{c.ajuda}</p>}
+              </div>
+            ))}
+          </div>
+        </Cartao>
+      ))}
+
+      <Cartao titulo="Logo, fotos e arquivos">
+        <p className="text-sm text-slate-400 mb-3">Anexe a sua logo, fotos da empresa, produtos ou qualquer documento que ajude. Formatos: PNG, JPG, WEBP ou PDF, até 3 MB cada (máximo de 10 arquivos).</p>
+        {b.arquivos.length > 0 && (
+          <ul className="space-y-2 mb-4">
+            {b.arquivos.map((a) => (
+              <li key={a.id} className="flex items-center justify-between gap-3 text-sm rounded-lg border border-slate-800 px-3 py-2">
+                <span className="text-white truncate">{a.nome} <span className="text-xs text-slate-500">({kb(a.tamanho)})</span></span>
+                <span className="flex items-center gap-3 shrink-0">
+                  <a href={`/api/cliente/briefing/${id}/arquivo/${a.id}`} className="text-cyan-400"><Download className="w-4 h-4" /></a>
+                  {!travado && <button onClick={() => remover(a.id)} className="text-red-300"><Trash2 className="w-4 h-4" /></button>}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+        {!travado && (
+          <label className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-dashed border-slate-600 hover:border-cyan-400 text-sm text-slate-200 cursor-pointer">
+            <Upload className="w-4 h-4" /> Escolher arquivos
+            <input type="file" multiple accept=".png,.jpg,.jpeg,.webp,.pdf,image/png,image/jpeg,image/webp,application/pdf" className="hidden" onChange={(e) => { anexar(e.target.files); e.target.value = ''; }} />
+          </label>
+        )}
+      </Cartao>
+
+      {msg && <p className={`text-sm ${msg.ok ? 'text-emerald-300' : 'text-red-300'}`}>{msg.t}</p>}
+      {falta.length > 0 && <ul className="text-sm text-red-300 list-disc pl-5">{falta.map((f) => <li key={f}>{f}</li>)}</ul>}
+      {!travado && (
+        <div className="flex flex-wrap gap-3">
+          <button className="px-5 py-3 rounded-xl border border-slate-600 hover:border-cyan-400 text-slate-200 font-semibold text-sm disabled:opacity-60" disabled={ocupado} onClick={salvar}>Salvar rascunho</button>
+          <button className="px-5 py-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-sm disabled:opacity-60" disabled={ocupado} onClick={enviar}>{b.status === 'ENVIADO' ? 'Atualizar e reenviar' : 'Enviar para a Antum'}</button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const MeuProjeto: React.FC<{ projetos: Projeto[]; aoMudar: () => void }> = ({ projetos, aoMudar }) => {
+  const [aberto, setAberto] = useState<string | null>(projetos.length === 1 ? projetos[0].id : null);
+  if (aberto) return <FormBriefing id={aberto} onVoltar={() => { setAberto(null); aoMudar(); }} />;
+  return (
+    <Cartao titulo="Meu projeto">
+      <p className="text-sm text-slate-400 mb-4">Aqui você envia as informações, textos, logo e fotos para a Antum montar o seu serviço.</p>
+      <ul className="space-y-3">
+        {projetos.map((p) => {
+          const st = STATUS_PROJ[p.status] || STATUS_PROJ.PENDENTE;
+          return (
+            <li key={p.id} className="flex flex-wrap items-center justify-between gap-3 text-sm">
+              <div><p className="font-semibold text-white">{p.plano_nome}</p><span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${st.c}`}>{st.t}</span></div>
+              <button className="px-4 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs" onClick={() => setAberto(p.id)}>{p.status === 'PENDENTE' ? 'Preencher' : 'Abrir'}</button>
+            </li>
+          );
+        })}
+      </ul>
+    </Cartao>
+  );
+};
+
 // ---------- painel --------------------------------------------------------------
 interface Painel {
   cliente: { nome: string; email: string; cpf_cnpj: string; celular: string; endereco: string; numero: string; complemento: string | null; bairro: string; cidade: string; uf: string; cep: string };
@@ -173,7 +331,8 @@ const TrocarSenha: React.FC = () => {
 
 const PainelCliente: React.FC<{ aoSair: () => void }> = ({ aoSair }) => {
   const [p, setP] = useState<Painel | null>(null);
-  const [aba, setAba] = useState<'fin' | 'conta'>('fin');
+  const [aba, setAba] = useState<'fin' | 'conta' | 'proj'>('fin');
+  const [projetos, setProjetos] = useState<Projeto[]>([]);
   const [erro, setErro] = useState('');
 
   const carregar = useCallback(async () => {
@@ -181,7 +340,11 @@ const PainelCliente: React.FC<{ aoSair: () => void }> = ({ aoSair }) => {
     if (r.status === 401) return aoSair();
     if (r.ok) setP(r.data); else setErro('Não foi possível carregar seus dados agora.');
   }, [aoSair]);
-  useEffect(() => { carregar(); }, [carregar]);
+  const carregarProjetos = useCallback(async () => {
+    const r = await api<{ projetos: Projeto[] }>('/api/cliente/briefings');
+    if (r.ok) setProjetos(r.data.projetos);
+  }, []);
+  useEffect(() => { carregar(); carregarProjetos(); }, [carregar, carregarProjetos]);
 
   const sair = async () => { await api('/api/cliente/logout', {}); aoSair(); };
 
@@ -189,7 +352,7 @@ const PainelCliente: React.FC<{ aoSair: () => void }> = ({ aoSair }) => {
   if (!p) return <p className="text-sm text-slate-500 flex items-center justify-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Carregando…</p>;
 
   const abertas = p.cobrancas.filter((c) => c.status === 'PENDING' || c.status === 'OVERDUE');
-  const tab = (id: 'fin' | 'conta', texto: string, Icone: React.ElementType) => (
+  const tab = (id: 'fin' | 'conta' | 'proj', texto: string, Icone: React.ElementType) => (
     <button onClick={() => setAba(id)} className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold ${aba === id ? 'bg-cyan-500 text-slate-950' : 'text-slate-300 hover:bg-slate-800'}`}>
       <Icone className="w-4 h-4" /> {texto}
     </button>
@@ -212,7 +375,16 @@ const PainelCliente: React.FC<{ aoSair: () => void }> = ({ aoSair }) => {
         </div>
       )}
 
-      <div className="flex gap-2">{tab('fin', 'Financeiro', Wallet)}{tab('conta', 'Minha conta', UserRound)}</div>
+      {projetos.some((x) => x.status === 'PENDENTE' || x.status === 'RASCUNHO') && aba !== 'proj' && (
+        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-100 flex flex-wrap items-center justify-between gap-3">
+          <span><strong>Falta pouco para começarmos:</strong> envie as informações do seu projeto (textos, logo e fotos).</span>
+          <button className="px-4 py-2 rounded-lg bg-amber-400 text-slate-950 font-bold text-xs" onClick={() => setAba('proj')}>Preencher agora</button>
+        </div>
+      )}
+
+      <div className="flex flex-wrap gap-2">{tab('fin', 'Financeiro', Wallet)}{projetos.length > 0 && tab('proj', 'Meu projeto', ClipboardList)}{tab('conta', 'Minha conta', UserRound)}</div>
+
+      {aba === 'proj' && <MeuProjeto projetos={projetos} aoMudar={carregarProjetos} />}
 
       {aba === 'fin' && (
         <Cartao titulo="Cobranças">

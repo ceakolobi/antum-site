@@ -146,7 +146,7 @@ const Login: React.FC<{ aoEntrar: () => void }> = ({ aoEntrar }) => {
 // ---------- painel --------------------------------------------------------------
 interface Painel {
   cliente: { nome: string; email: string; cpf_cnpj: string; celular: string; endereco: string; numero: string; complemento: string | null; bairro: string; cidade: string; uf: string; cep: string };
-  assinaturas: { id: string; plano_nome: string; valor: string; status: string; vencimento_dia: number; tem_contrato: boolean }[];
+  assinaturas: { id: string; plano_nome: string; valor: string; status: string; vencimento_dia: number; tem_contrato: boolean; bloqueada: boolean }[];
   cobrancas: { valor: string; vencimento: string; status: string; invoice_url: string | null; boleto_url: string | null; pago_em: string | null }[];
 }
 
@@ -205,6 +205,13 @@ const PainelCliente: React.FC<{ aoSair: () => void }> = ({ aoSair }) => {
         <button onClick={sair} className="inline-flex items-center gap-2 text-sm text-slate-300 hover:text-white"><LogOut className="w-4 h-4" /> Sair</button>
       </div>
 
+      {p.assinaturas.some((a) => a.bloqueada) && (
+        <div className="rounded-xl border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-200">
+          <strong>Serviço bloqueado:</strong> {p.assinaturas.filter((a) => a.bloqueada).map((a) => a.plano_nome).join(', ')}. Regularize as cobranças em aberto ou{' '}
+          <Link to="/contato" className="underline">fale com a Antum</Link> para liberar.
+        </div>
+      )}
+
       <div className="flex gap-2">{tab('fin', 'Financeiro', Wallet)}{tab('conta', 'Minha conta', UserRound)}</div>
 
       {aba === 'fin' && (
@@ -252,7 +259,7 @@ const PainelCliente: React.FC<{ aoSair: () => void }> = ({ aoSair }) => {
                 {p.assinaturas.map((a) => (
                   <li key={a.id} className="flex flex-wrap items-center justify-between gap-3 text-sm">
                     <div>
-                      <p className="font-semibold text-white">{a.plano_nome}</p>
+                      <p className="font-semibold text-white">{a.plano_nome}{a.bloqueada && <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-semibold text-red-300 bg-red-500/10">Bloqueado</span>}</p>
                       <p className="text-xs text-slate-400">{brl(a.valor)}/mês · vence todo dia {a.vencimento_dia} · {ASSINATURA[a.status] || a.status}</p>
                     </div>
                     {a.tem_contrato && <a href={`/api/cliente/contrato/${a.id}/pdf`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs text-cyan-400 underline"><FileText className="w-4 h-4" /> Contrato (PDF)</a>}

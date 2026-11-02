@@ -813,21 +813,144 @@ export function registrarFinanceiro(app: Express) {
               (select coalesce(sum(valor),0) from financeiro.cobrancas
                  where pago_em >= date_trunc('month', now())) as recebido_mes,
               (select count(*)::int from financeiro.cobrancas where status = 'OVERDUE') as vencidas,
-              (select coalesce(sum(valor),0) from financeiro.cobrancas where status = 'OVERDUE') as valor_vencido`),
-        db(`select id, nome, tipo, email, celular, cpf_cnpj, cidade, uf, status_cadastro, asaas_customer_id, ultimo_erro, created_at
-              from financeiro.clientes order by created_at desc limit 300`),
+              (select coalesce(sum(valor),0) from financeiro.cobrancas where status = 'OVERDUE') as valor_vencido,
+              (select coalesce(sum(valor),0) from financeiro.cobrancas where pago_em is not null) as recebido_total,
+              (select coalesce(sum(valor),0) from financeiro.cobrancas where status = 'PENDING') as a_receber,
+              (select count(*)::int from financeiro.assinaturas where bloqueada and status <> 'CANCELADA') as bloqueadas`),
+        db(`select c.id, c.nome, c.tipo, c.email, c.celular, c.cpf_cnpj, c.cidade, c.uf, c.status_cadastro, c.asaas_customer_id, c.ultimo_erro, c.created_at,
+                   (select count(*)::int from financeiro.assinaturas a where a.cliente_id = c.id and a.bloqueada and a.status <> 'CANCELADA') as bloqueadas
+              from financeiro.clientes c order by c.created_at desc limit 300`),
         db(`select a.id, a.plano_slug, a.plano_nome, a.valor, a.taxa_implantacao, a.trial_dias, a.vencimento_dia,
-                   a.forma_pagamento, a.status, a.ultimo_erro, a.created_at, c.nome as cliente, c.email as cliente_email
+                   a.forma_pagamento, a.status, a.bloqueada, a.ultimo_erro, a.created_at, c.nome as cliente, c.email as cliente_email
               from financeiro.assinaturas a join financeiro.clientes c on c.id = a.cliente_id
              order by (a.status = 'AGUARDANDO_APROVACAO') desc, a.created_at desc limit 300`),
         db(`select b.id, b.valor, b.vencimento, b.status, b.forma_pagamento, b.invoice_url, b.pago_em, c.nome as cliente
               from financeiro.cobrancas b left join financeiro.clientes c on c.id = b.cliente_id
-             order by b.vencimento desc limit 300`),
+             order by b.vencimento desc limit 1000`),
         db('select quando, admin_email, acao, detalhe, ip from financeiro.auditoria order by quando desc limit 60'),
       ]);
       res.json({ resumo: resumo[0], clientes, assinaturas, cobrancas, auditoria, asaasBase: ASAAS_BASE().includes('sandbox') ? 'sandbox' : 'producao' });
     } catch (e) {
       console.error('[fin/admin/painel]', (e as Error).message);
+      res.status(500).json({ error: 'erro_interno' });
+    }
+  });
+
+  // ----- Consulta, edição e bloqueio (administrador) -----
+  const idUuid = (v: unknown) => /^[0-9a-f-]{36}$/i.test(String(v));
+
+  app.get('/api/admin/clientes/:id', naoConfigurado, exigeAdmin, async (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    if (!idUuid(req.params.id)) return res.status(404).json({ error: 'cliente_nao_encontrado' });
+    try {
+      const [cliente] = await db(
+        `select id, tipo, nome, cpf_cnpj, email, celular, telefone, cep, endereco, numero, complemento, bairro, cidade, uf,
+                status_cadastro, asaas_customer_id, aceite_em, aceite_ip, created_at,
+                (select ultimo_login_em from financeiro.cliente_acessos x where x.cliente_id = clientes.id) as ultimo_login_em,
+                exists(select 1 from financeiro.cliente_acessos x where x.cliente_id = clientes.id and x.senha_hash is not null) as tem_senha
+           from financeiro.clientes where id = $1`, [req.params.id]);
+      if (!cliente) return res.status(404).json({ error: 'cliente_nao_encontrado' });
+      const assinaturas = await db(
+        `select a.id, a.plano_nome, a.valor, a.taxa_implantacao, a.trial_dias, a.vencimento_dia, a.forma_pagamento, a.status,
+                a.bloqueada, a.bloqueada_em, a.bloqueio_motivo, a.created_at,
+                exists(select 1 from financeiro.contratos k where k.assinatura_id = a.id) as tem_contrato
+           from financeiro.assinaturas a where a.cliente_id = $1 order by a.created_at desc`, [req.params.id]);
+      const cobrancas = await db(
+        `select valor, vencimento, status, forma_pagamento, invoice_url, pago_em from financeiro.cobrancas
+          where cliente_id = $1 order by vencimento desc limit 100`, [req.params.id]);
+      await auditar(quem(res), 'cliente_consultado', { cliente: req.params.id }, ipDe(req));
+      res.json({ cliente, assinaturas, cobrancas });
+    } catch (e) {
+      console.error('[fin/admin/cliente]', (e as Error).message);
+      res.status(500).json({ error: 'erro_interno' });
+    }
+  });
+
+  app.put('/api/admin/clientes/:id', naoConfigurado, exigeAdmin, async (req, res) => {
+    if (!idUuid(req.params.id)) return res.status(404).json({ error: 'cliente_nao_encontrado' });
+    try {
+      const b = (req.body || {}) as Record<string, unknown>;
+      const nome = str(b.nome, 150);
+      const email = str(b.email, 150).toLowerCase();
+      const celular = onlyDigits(b.celular);
+      const telefone = onlyDigits(b.telefone);
+      const cep = onlyDigits(b.cep);
+      const uf = str(b.uf, 2).toUpperCase();
+      if (nome.length < 3 || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || celular.length < 10 || celular.length > 11
+        || cep.length !== 8 || !/^[A-Z]{2}$/.test(uf) || (telefone && (telefone.length < 10 || telefone.length > 11))) {
+        return res.status(400).json({ error: 'dados_invalidos' });
+      }
+      const endereco = str(b.endereco, 150), numero = str(b.numero, 20), bairro = str(b.bairro, 100), cidade = str(b.cidade, 100);
+      if (!endereco || !numero || !bairro || !cidade) return res.status(400).json({ error: 'dados_invalidos' });
+      const complemento = str(b.complemento, 80);
+      const [antes] = await db('select asaas_customer_id, email from financeiro.clientes where id = $1', [req.params.id]);
+      if (!antes) return res.status(404).json({ error: 'cliente_nao_encontrado' });
+      await db(
+        `update financeiro.clientes set nome=$2, email=$3, celular=$4, telefone=$5, cep=$6, endereco=$7, numero=$8,
+                complemento=$9, bairro=$10, cidade=$11, uf=$12, updated_at=now() where id=$1`,
+        [req.params.id, nome, email, celular, telefone || null, cep, endereco, numero, complemento || null, bairro, cidade, uf],
+      );
+      // CPF/CNPJ não muda aqui (é a identidade do cliente). O e-mail de login acompanha, se já existir acesso.
+      await db('update financeiro.cliente_acessos set email = $2 where cliente_id = $1', [req.params.id, email]).catch(() => undefined);
+      let asaasOk = true;
+      if (antes.asaas_customer_id) {
+        try {
+          await asaas('PUT', `/customers/${antes.asaas_customer_id}`, {
+            name: nome, email, mobilePhone: celular, phone: telefone || undefined, postalCode: cep, address: endereco,
+            addressNumber: numero, complement: complemento || undefined, province: bairro,
+          });
+        } catch { asaasOk = false; }
+      }
+      await auditar(quem(res), 'cliente_editado', { cliente: req.params.id, asaas: asaasOk }, ipDe(req));
+      res.json({ ok: true, asaas: asaasOk });
+    } catch (e) {
+      console.error('[fin/admin/cliente/put]', String((e as Error).message).slice(0, 200));
+      res.status(500).json({ error: 'erro_interno' });
+    }
+  });
+
+  // Bloquear / desbloquear um serviço. Registra quem, quando e por quê. Não cancela a cobrança.
+  app.post('/api/admin/assinaturas/:id/bloqueio', naoConfigurado, exigeAdmin, async (req, res) => {
+    if (!idUuid(req.params.id)) return res.status(404).json({ error: 'assinatura_nao_encontrada' });
+    try {
+      const bloquear = req.body?.bloquear === true;
+      const motivo = str(req.body?.motivo, 300);
+      const r = await db(
+        `update financeiro.assinaturas set bloqueada = $2, bloqueada_em = case when $2 then now() else null end,
+                bloqueio_motivo = case when $2 then $3 else null end, updated_at = now()
+          where id = $1 and status <> 'CANCELADA' returning id`,
+        [req.params.id, bloquear, motivo || null],
+      );
+      if (!r.length) return res.status(404).json({ error: 'assinatura_nao_encontrada' });
+      await auditar(quem(res), bloquear ? 'servico_bloqueado' : 'servico_desbloqueado', { assinatura: req.params.id, motivo }, ipDe(req));
+      res.json({ ok: true, bloqueada: bloquear });
+    } catch (e) {
+      console.error('[fin/admin/bloqueio]', (e as Error).message);
+      res.status(500).json({ error: 'erro_interno' });
+    }
+  });
+
+  // Consulta de status para outros sistemas da Antum (ex.: Marina): GET /api/servicos/status?documento=...&plano=...
+  // Protegido por token no cabeçalho "x-api-token" (variável SERVICOS_API_TOKEN, 32+ caracteres).
+  app.get('/api/servicos/status', naoConfigurado, async (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    const t = env('SERVICOS_API_TOKEN');
+    const h = (req.headers['x-api-token'] || '').toString();
+    if (!t || t.length < 32 || !h || !igual(h, t)) return res.status(401).json({ error: 'nao_autorizado' });
+    if (!limite(`svc:${ipDe(req)}`, 120, 60_000)) return res.status(429).json({ error: 'muitas_tentativas' });
+    try {
+      const doc = onlyDigits(req.query.documento);
+      const plano = str(req.query.plano, 60);
+      if (doc.length !== 11 && doc.length !== 14) return res.status(400).json({ error: 'documento_invalido' });
+      const rows = await db(
+        `select a.plano_slug, a.plano_nome, a.status, a.bloqueada, a.bloqueio_motivo
+           from financeiro.assinaturas a join financeiro.clientes c on c.id = a.cliente_id
+          where c.cpf_cnpj = $1 and a.status <> 'CANCELADA' and ($2 = '' or a.plano_slug = $2)`,
+        [doc, plano],
+      );
+      res.json({ encontrado: rows.length > 0, bloqueado: rows.some((r: any) => r.bloqueada), servicos: rows });
+    } catch (e) {
+      console.error('[fin/servicos/status]', (e as Error).message);
       res.status(500).json({ error: 'erro_interno' });
     }
   });

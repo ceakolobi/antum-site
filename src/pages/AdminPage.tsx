@@ -5,9 +5,10 @@ import { Loader2, LogOut, Copy, Check, AlertTriangle, RefreshCw } from 'lucide-r
 // ---------- tipos -------------------------------------------------------------
 interface Resumo {
   clientes: number; ativas: number; aguardando: number; mrr: string; recebido_mes: string; vencidas: number; valor_vencido: string;
+  recebido_total: string; a_receber: string; bloqueadas: number;
 }
-interface Cliente { id: string; nome: string; tipo: string; email: string; celular: string; cpf_cnpj: string; cidade: string; uf: string; status_cadastro: string; ultimo_erro: string | null; created_at: string }
-interface Assinatura { id: string; plano_slug: string | null; plano_nome: string; valor: string; taxa_implantacao: string; trial_dias: number; vencimento_dia: number; forma_pagamento: string; status: string; ultimo_erro: string | null; created_at: string; cliente: string; cliente_email: string }
+interface Cliente { id: string; nome: string; tipo: string; email: string; celular: string; cpf_cnpj: string; cidade: string; uf: string; status_cadastro: string; ultimo_erro: string | null; created_at: string; bloqueadas: number }
+interface Assinatura { id: string; plano_slug: string | null; plano_nome: string; valor: string; taxa_implantacao: string; trial_dias: number; vencimento_dia: number; forma_pagamento: string; status: string; bloqueada: boolean; ultimo_erro: string | null; created_at: string; cliente: string; cliente_email: string }
 interface Cobranca { id: string; valor: string; vencimento: string; status: string; forma_pagamento: string | null; invoice_url: string | null; pago_em: string | null; cliente: string | null }
 interface Auditoria { quando: string; admin_email: string | null; acao: string; detalhe: any; ip: string | null }
 interface Painel { resumo: Resumo; clientes: Cliente[]; assinaturas: Assinatura[]; cobrancas: Cobranca[]; auditoria: Auditoria[]; asaasBase: 'sandbox' | 'producao' }
@@ -271,6 +272,229 @@ const EmpresaAba: React.FC = () => {
   );
 };
 
+// ---------- impressão: só a área marcada sai no papel --------------------------
+const EstiloImpressao: React.FC = () => (
+  <style>{`
+    @media print {
+      body * { visibility: hidden !important; }
+      .area-impressao, .area-impressao * { visibility: visible !important; }
+      .area-impressao { position: absolute !important; left: 0; top: 0; width: 100% !important; background: #fff !important; color: #000 !important; padding: 8mm !important; }
+      .area-impressao * { color: #000 !important; background: transparent !important; border-color: #999 !important; box-shadow: none !important; }
+      .modal-impressao { position: static !important; overflow: visible !important; height: auto !important; background: #fff !important; }
+      .no-print { display: none !important; }
+    }
+  `}</style>
+);
+
+const STATUS_ABERTA = new Set(['PENDING']);
+const ehPaga = (st: string) => st === 'RECEIVED' || st === 'CONFIRMED' || st === 'RECEIVED_IN_CASH';
+
+interface Ficha {
+  cliente: {
+    id: string; tipo: string; nome: string; cpf_cnpj: string; email: string; celular: string; telefone: string | null; cep: string; endereco: string;
+    numero: string; complemento: string | null; bairro: string; cidade: string; uf: string; status_cadastro: string; aceite_em: string | null;
+    aceite_ip: string | null; created_at: string; ultimo_login_em: string | null; tem_senha: boolean;
+  };
+  assinaturas: { id: string; plano_nome: string; valor: string; taxa_implantacao: string; trial_dias: number; vencimento_dia: number; forma_pagamento: string; status: string; bloqueada: boolean; bloqueada_em: string | null; bloqueio_motivo: string | null; tem_contrato: boolean }[];
+  cobrancas: { valor: string; vencimento: string; status: string; forma_pagamento: string | null; invoice_url: string | null; pago_em: string | null }[];
+}
+
+const CAMPOS_EDIT: [string, string][] = [
+  ['nome', 'Nome'], ['email', 'E-mail'], ['celular', 'Celular'], ['telefone', 'Telefone fixo'], ['cep', 'CEP'],
+  ['endereco', 'Endereço'], ['numero', 'Número'], ['complemento', 'Complemento'], ['bairro', 'Bairro'], ['cidade', 'Cidade'], ['uf', 'UF'],
+];
+
+const FichaCliente: React.FC<{ id: string; editarInicial?: boolean; onFechar: () => void; onMudou: () => void }> = ({ id, editarInicial, onFechar, onMudou }) => {
+  const [f, setF] = useState<Ficha | null>(null);
+  const [editando, setEditando] = useState(false);
+  const [form, setForm] = useState<Record<string, string>>({});
+  const [msg, setMsg] = useState<{ ok: boolean; t: string } | null>(null);
+
+  const carregar = useCallback(async () => {
+    const r = await api<Ficha>(`/api/admin/clientes/${id}`);
+    if (r.ok) setF(r.data); else setMsg({ ok: false, t: 'Não foi possível carregar o cliente.' });
+  }, [id]);
+  useEffect(() => { carregar(); }, [carregar]);
+  useEffect(() => {
+    if (f && editarInicial && !editando && Object.keys(form).length === 0) iniciarEdicao();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [f]);
+
+  const iniciarEdicao = () => {
+    if (!f) return;
+    const c = f.cliente as unknown as Record<string, string | null>;
+    setForm(Object.fromEntries(CAMPOS_EDIT.map(([k]) => [k, String(c[k] ?? '')])));
+    setEditando(true); setMsg(null);
+  };
+  const salvar = async (e: React.FormEvent) => {
+    e.preventDefault(); setMsg(null);
+    const r = await api(`/api/admin/clientes/${id}`, { method: 'PUT', body: form });
+    if (r.ok) {
+      setMsg({ ok: true, t: r.data.asaas === false ? 'Salvo aqui. O Asaas não atualizou agora: confira o cadastro lá.' : 'Dados salvos, aqui e no Asaas.' });
+      setEditando(false); await carregar(); onMudou();
+    } else setMsg({ ok: false, t: r.data?.error === 'dados_invalidos' ? 'Confira os dados: e-mail, celular, CEP e UF precisam estar corretos.' : 'Não foi possível salvar.' });
+  };
+  const bloqueio = async (aid: string, bloquear: boolean) => {
+    let motivo = '';
+    if (bloquear) {
+      const m = window.prompt('Motivo do bloqueio (opcional):', 'Inadimplência');
+      if (m === null) return;
+      motivo = m;
+    } else if (!window.confirm('Desbloquear este serviço?')) return;
+    const r = await api(`/api/admin/assinaturas/${aid}/bloqueio`, { method: 'POST', body: { bloquear, motivo } });
+    setMsg({ ok: r.ok, t: r.ok ? (bloquear ? 'Serviço bloqueado.' : 'Serviço desbloqueado.') : 'Não foi possível alterar o serviço.' });
+    await carregar(); onMudou();
+  };
+
+  const c = f?.cliente;
+  const total = (f?.cobrancas || []).reduce((a, x) => ({
+    pago: a.pago + (ehPaga(x.status) ? Number(x.valor) : 0),
+    aberto: a.aberto + (STATUS_ABERTA.has(x.status) ? Number(x.valor) : 0),
+    vencido: a.vencido + (x.status === 'OVERDUE' ? Number(x.valor) : 0),
+  }), { pago: 0, aberto: 0, vencido: 0 });
+
+  return (
+    <div className="modal-impressao fixed inset-0 z-50 bg-black/70 overflow-y-auto p-4" onClick={onFechar}>
+      <div className="area-impressao max-w-3xl mx-auto my-6 rounded-2xl bg-[#0e1422] border border-slate-700 p-6 space-y-5" onClick={(e) => e.stopPropagation()}>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-xs text-slate-500">Ficha do cliente — Antum</p>
+            <h2 className="text-xl font-extrabold text-white">{c?.nome || 'Carregando…'}</h2>
+          </div>
+          <div className="no-print flex gap-2">
+            {f && !editando && <button className={btnSec} onClick={iniciarEdicao}>Editar</button>}
+            {f && <button className={btnSec} onClick={() => window.print()}>Imprimir</button>}
+            <button className={btnSec} onClick={onFechar}>Fechar</button>
+          </div>
+        </div>
+        {msg && <p className={`no-print text-sm ${msg.ok ? 'text-emerald-300' : 'text-red-300'}`}>{msg.t}</p>}
+        {!f && !msg && <p className="text-sm text-slate-500 flex gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Carregando…</p>}
+
+        {f && c && !editando && (
+          <>
+            <dl className="grid sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
+              {[
+                [c.tipo === 'PJ' ? 'CNPJ' : 'CPF', c.cpf_cnpj], ['E-mail', c.email], ['Celular', c.celular], ['Telefone', c.telefone || '—'],
+                ['Endereço', `${c.endereco}, ${c.numero}${c.complemento ? ' - ' + c.complemento : ''}, ${c.bairro}, ${c.cidade}/${c.uf} — CEP ${c.cep}`],
+                ['Cadastro em', dataHora(c.created_at)], ['Aceite do contrato', c.aceite_em ? `${dataHora(c.aceite_em)} (IP ${c.aceite_ip || '—'})` : '—'],
+                ['Área do cliente', c.tem_senha ? `Senha criada${c.ultimo_login_em ? ' · último acesso ' + dataHora(c.ultimo_login_em) : ' · ainda não entrou'}` : 'Ainda não criou a senha'],
+              ].map(([k, v]) => (<div key={k} className={k === 'Endereço' ? 'sm:col-span-2' : ''}><dt className="text-xs text-slate-500">{k}</dt><dd className="text-white break-words">{v}</dd></div>))}
+            </dl>
+
+            <div>
+              <h3 className="text-sm font-bold text-white mb-2">Serviços contratados</h3>
+              {f.assinaturas.length === 0 ? <p className="text-sm text-slate-500">Nenhum serviço.</p> : (
+                <ul className="space-y-2">
+                  {f.assinaturas.map((a) => (
+                    <li key={a.id} className="rounded-xl border border-slate-700 p-3 text-sm flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="font-semibold text-white">{a.plano_nome} {a.bloqueada && <span className="ml-1 px-2 py-0.5 rounded-full text-xs font-semibold text-red-300 bg-red-500/10">BLOQUEADO</span>}</p>
+                        <p className="text-xs text-slate-400">{brl(a.valor)}/mês · vence dia {a.vencimento_dia} · {STATUS_ASS[a.status] || a.status}{Number(a.taxa_implantacao) > 0 ? ` · implantação ${brl(a.taxa_implantacao)}` : ''}</p>
+                        {a.bloqueada && <p className="text-xs text-red-300">Bloqueado em {a.bloqueada_em ? dataHora(a.bloqueada_em) : '—'}{a.bloqueio_motivo ? ` — ${a.bloqueio_motivo}` : ''}</p>}
+                      </div>
+                      <div className="no-print flex gap-2">
+                        {a.tem_contrato && <a className={btnSec} href={`/api/admin/contratos/${a.id}/pdf`} target="_blank" rel="noopener noreferrer">Contrato PDF</a>}
+                        {a.status !== 'CANCELADA' && (a.bloqueada
+                          ? <button className={btnSec} onClick={() => bloqueio(a.id, false)}>Desbloquear</button>
+                          : <button className="px-3 py-1.5 rounded-lg border border-red-500/60 hover:border-red-400 text-red-300 text-xs font-semibold" onClick={() => bloqueio(a.id, true)}>Bloquear</button>)}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div>
+              <h3 className="text-sm font-bold text-white mb-2">Cobranças</h3>
+              <p className="text-xs text-slate-400 mb-2">Recebido {brl(total.pago)} · A receber {brl(total.aberto)} · Vencido {brl(total.vencido)}</p>
+              {f.cobrancas.length === 0 ? <p className="text-sm text-slate-500">Nenhuma cobrança registrada.</p> : (
+                <table className="w-full text-sm">
+                  <thead><tr className="text-left text-xs text-slate-500"><th className="py-1 pr-3">Vencimento</th><th className="py-1 pr-3">Valor</th><th className="py-1 pr-3">Situação</th><th className="py-1">Pago em</th></tr></thead>
+                  <tbody className="divide-y divide-slate-800">
+                    {f.cobrancas.map((x, i) => (
+                      <tr key={i}><td className="py-1.5 pr-3 text-white">{dataBR(x.vencimento)}</td><td className="py-1.5 pr-3 text-white">{brl(x.valor)}</td><td className="py-1.5 pr-3">{STATUS_COBRANCA[x.status] || x.status}</td><td className="py-1.5">{dataBR(x.pago_em)}</td></tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+            <p className="hidden print:block text-xs text-slate-500">Impresso em {new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</p>
+          </>
+        )}
+
+        {f && c && editando && (
+          <form onSubmit={salvar} className="space-y-3">
+            <p className="text-xs text-slate-500">{c.tipo === 'PJ' ? 'CNPJ' : 'CPF'} {c.cpf_cnpj} não pode ser alterado aqui.</p>
+            <div className="grid sm:grid-cols-2 gap-3">
+              {CAMPOS_EDIT.map(([k, rotulo]) => (
+                <div key={k} className={k === 'endereco' || k === 'nome' ? 'sm:col-span-2' : ''}>
+                  <label className={rot}>{rotulo}</label>
+                  <input className={campo} value={form[k] ?? ''} onChange={(e) => setForm((x) => ({ ...x, [k]: e.target.value }))} />
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2"><button className={btn}>Salvar</button><button type="button" className={btnSec} onClick={() => setEditando(false)}>Cancelar</button></div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ---------- cobranças: filtro por mês e situação, totais e impressão --------------
+const CobrancasAba: React.FC<{ lista: Cobranca[] }> = ({ lista }) => {
+  const [mes, setMes] = useState('todos');
+  const [sit, setSit] = useState('todas');
+  const meses = useMemo(() => Array.from(new Set(lista.map((b) => String(b.vencimento).slice(0, 7)))).sort().reverse(), [lista]);
+  const filtradas = useMemo(() => lista.filter((b) =>
+    (mes === 'todos' || String(b.vencimento).slice(0, 7) === mes) &&
+    (sit === 'todas' || (sit === 'pagas' ? ehPaga(b.status) : sit === 'aberto' ? b.status === 'PENDING' : b.status === 'OVERDUE')),
+  ), [lista, mes, sit]);
+  const t = filtradas.reduce((a, b) => ({
+    pago: a.pago + (ehPaga(b.status) ? Number(b.valor) : 0),
+    aberto: a.aberto + (b.status === 'PENDING' ? Number(b.valor) : 0),
+    vencido: a.vencido + (b.status === 'OVERDUE' ? Number(b.valor) : 0),
+  }), { pago: 0, aberto: 0, vencido: 0 });
+  const nomeMes = (m: string) => (m === 'todos' ? 'Todos os meses' : `${m.slice(5)}/${m.slice(0, 4)}`);
+
+  return (
+    <div className="space-y-4">
+      <div className="no-print flex flex-wrap items-end gap-3">
+        <div><label className={rot}>Mês de vencimento</label>
+          <select className={campo} value={mes} onChange={(e) => setMes(e.target.value)}><option value="todos">Todos os meses</option>{meses.map((m) => <option key={m} value={m}>{nomeMes(m)}</option>)}</select></div>
+        <div><label className={rot}>Situação</label>
+          <select className={campo} value={sit} onChange={(e) => setSit(e.target.value)}><option value="todas">Todas</option><option value="pagas">Pagas</option><option value="aberto">A receber</option><option value="vencidas">Vencidas</option></select></div>
+        <button className={btn} onClick={() => window.print()}>Imprimir</button>
+      </div>
+      <div className="area-impressao space-y-4">
+        <div className="hidden print:block">
+          <h2 className="text-lg font-bold">Extrato de cobranças — Antum</h2>
+          <p className="text-xs">{nomeMes(mes)} · {sit === 'todas' ? 'todas as situações' : sit} · impresso em {new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</p>
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <Cartao titulo="Recebido" valor={brl(t.pago)} />
+          <Cartao titulo="A receber" valor={brl(t.aberto)} />
+          <Cartao titulo="Vencido" valor={brl(t.vencido)} alerta={t.vencido > 0} />
+          <Cartao titulo="Total" valor={brl(t.pago + t.aberto + t.vencido)} sub={`${filtradas.length} cobrança${filtradas.length === 1 ? '' : 's'}`} />
+        </div>
+        <Tabela cols={['Cliente', 'Valor', 'Vencimento', 'Status', 'Forma', 'Pago em', 'Link']} vazio="Nenhuma cobrança neste filtro." vazioQuando={filtradas.length === 0}>
+          {filtradas.map((b) => (
+            <tr key={b.id}>
+              <td className="px-3 py-2 font-semibold text-white">{b.cliente || '—'}</td>
+              <td className="px-3 py-2 whitespace-nowrap">{brl(b.valor)}</td>
+              <td className="px-3 py-2 whitespace-nowrap">{dataBR(b.vencimento)}</td>
+              <td className="px-3 py-2"><Selo texto={STATUS_COBRANCA[b.status] || b.status} /></td>
+              <td className="px-3 py-2">{b.forma_pagamento || '—'}</td>
+              <td className="px-3 py-2 whitespace-nowrap">{dataBR(b.pago_em)}</td>
+              <td className="px-3 py-2 no-print">{b.invoice_url ? <a className="text-cyan-300 underline" href={b.invoice_url} target="_blank" rel="noopener noreferrer">abrir</a> : '—'}</td>
+            </tr>
+          ))}
+        </Tabela>
+      </div>
+    </div>
+  );
+};
+
 // ---------- página ------------------------------------------------------------
 const ABAS = ['Resumo', 'Contratações', 'Clientes', 'Cobranças', 'Catálogo', 'Links', 'Empresa', 'Atividade'] as const;
 
@@ -280,6 +504,7 @@ export const AdminPage: React.FC = () => {
   const [aba, setAba] = useState<(typeof ABAS)[number]>('Resumo');
   const [aviso, setAviso] = useState<{ texto: string; ok: boolean } | null>(null);
   const [ocupado, setOcupado] = useState<string | null>(null);
+  const [ficha, setFicha] = useState<{ id: string; editar: boolean } | null>(null);
 
   useEffect(() => {
     document.title = 'Painel | ANTUM';
@@ -362,6 +587,10 @@ export const AdminPage: React.FC = () => {
             <Cartao titulo="Mensalidades contratadas" valor={brl(painel.resumo.mrr)} sub="por mês" />
             <Cartao titulo="Recebido neste mês" valor={brl(painel.resumo.recebido_mes)} />
             <Cartao titulo="Cobranças vencidas" valor={String(painel.resumo.vencidas)} sub={brl(painel.resumo.valor_vencido)} alerta={painel.resumo.vencidas > 0} />
+            <Cartao titulo="Recebido (total)" valor={brl(painel.resumo.recebido_total)} />
+            <Cartao titulo="A receber" valor={brl(painel.resumo.a_receber)} />
+            <Cartao titulo="Previsto (total)" valor={brl(Number(painel.resumo.recebido_total) + Number(painel.resumo.a_receber) + Number(painel.resumo.valor_vencido))} sub="recebido + a receber + vencido" />
+            <Cartao titulo="Serviços bloqueados" valor={String(painel.resumo.bloqueadas)} alerta={painel.resumo.bloqueadas > 0} />
           </div>
         )}
 
@@ -375,7 +604,7 @@ export const AdminPage: React.FC = () => {
                 <td className="px-3 py-2 whitespace-nowrap">{Number(a.taxa_implantacao) > 0 ? brl(a.taxa_implantacao) : '—'}</td>
                 <td className="px-3 py-2">{a.trial_dias > 0 ? `${a.trial_dias} dias` : '—'}</td>
                 <td className="px-3 py-2">dia {a.vencimento_dia}</td>
-                <td className="px-3 py-2"><Selo texto={STATUS_ASS[a.status] || a.status} />{a.ultimo_erro && <div className="text-xs text-red-300 mt-1 max-w-[220px]">{a.ultimo_erro}</div>}</td>
+                <td className="px-3 py-2"><Selo texto={STATUS_ASS[a.status] || a.status} />{a.bloqueada && <span className="ml-1 px-2 py-0.5 rounded-full text-xs font-semibold text-red-300 bg-red-500/10">Bloqueado</span>}{a.ultimo_erro && <div className="text-xs text-red-300 mt-1 max-w-[220px]">{a.ultimo_erro}</div>}</td>
                 <td className="px-3 py-2 whitespace-nowrap space-x-2">
                   {a.status === 'AGUARDANDO_APROVACAO' && <button className={btn} disabled={ocupado === a.id} onClick={() => aprovar(a.id)}>{ocupado === a.id ? 'Criando…' : 'Aprovar'}</button>}
                   <a className={btnSec} href={`/api/admin/contratos/${a.id}/pdf`} target="_blank" rel="noopener noreferrer">Contrato PDF</a>
@@ -387,35 +616,25 @@ export const AdminPage: React.FC = () => {
         )}
 
         {painel && aba === 'Clientes' && (
-          <Tabela cols={['Nome', 'CPF/CNPJ', 'E-mail', 'Celular', 'Cidade', 'Cadastro']} vazio="Nenhum cliente ainda." vazioQuando={painel.clientes.length === 0}>
+          <Tabela cols={['Nome', 'CPF/CNPJ', 'E-mail', 'Celular', 'Cidade', 'Cadastro', '']} vazio="Nenhum cliente ainda." vazioQuando={painel.clientes.length === 0}>
             {painel.clientes.map((c) => (
               <tr key={c.id}>
-                <td className="px-3 py-2 font-semibold text-white">{c.nome}</td>
+                <td className="px-3 py-2 font-semibold text-white">{c.nome}{c.bloqueadas > 0 && <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-semibold text-red-300 bg-red-500/10">Bloqueado</span>}</td>
                 <td className="px-3 py-2 whitespace-nowrap">{c.cpf_cnpj}</td>
                 <td className="px-3 py-2">{c.email}</td>
                 <td className="px-3 py-2 whitespace-nowrap">{c.celular}</td>
                 <td className="px-3 py-2">{c.cidade}/{c.uf}</td>
                 <td className="px-3 py-2"><Selo texto={c.status_cadastro === 'CONCLUIDO' ? 'Ativa' : c.status_cadastro === 'ERRO' ? 'Erro' : 'Aguardando'} /></td>
+                <td className="px-3 py-2 whitespace-nowrap space-x-2">
+                  <button className={btnSec} onClick={() => setFicha({ id: c.id, editar: false })}>Consultar</button>
+                  <button className={btnSec} onClick={() => setFicha({ id: c.id, editar: true })}>Editar</button>
+                </td>
               </tr>
             ))}
           </Tabela>
         )}
 
-        {painel && aba === 'Cobranças' && (
-          <Tabela cols={['Cliente', 'Valor', 'Vencimento', 'Status', 'Forma', 'Pago em', 'Link']} vazio="Nenhuma cobrança ainda." vazioQuando={painel.cobrancas.length === 0}>
-            {painel.cobrancas.map((b) => (
-              <tr key={b.id}>
-                <td className="px-3 py-2 font-semibold text-white">{b.cliente || '—'}</td>
-                <td className="px-3 py-2 whitespace-nowrap">{brl(b.valor)}</td>
-                <td className="px-3 py-2 whitespace-nowrap">{dataBR(b.vencimento)}</td>
-                <td className="px-3 py-2"><Selo texto={STATUS_COBRANCA[b.status] || b.status} /></td>
-                <td className="px-3 py-2">{b.forma_pagamento || '—'}</td>
-                <td className="px-3 py-2 whitespace-nowrap">{dataBR(b.pago_em)}</td>
-                <td className="px-3 py-2">{b.invoice_url ? <a className="text-cyan-300 underline" href={b.invoice_url} target="_blank" rel="noopener noreferrer">abrir</a> : '—'}</td>
-              </tr>
-            ))}
-          </Tabela>
-        )}
+        {painel && aba === 'Cobranças' && <CobrancasAba lista={painel.cobrancas} />}
 
         {aba === 'Catálogo' && <CatalogoAba />}
         {aba === 'Links' && <LinksAba />}
@@ -435,6 +654,8 @@ export const AdminPage: React.FC = () => {
           </Tabela>
         )}
       </div>
+      <EstiloImpressao />
+      {ficha && <FichaCliente id={ficha.id} editarInicial={ficha.editar} onFechar={() => setFicha(null)} onMudou={carregar} />}
     </section>
   );
 };

@@ -192,7 +192,7 @@ export function registrarAreaCliente(app: Express, h: Ajudantes, x: ExtrasClient
         [c.id],
       );
       const assinaturas = await db(
-        `select a.id, a.plano_nome, a.valor, a.status, a.vencimento_dia, a.forma_pagamento, a.created_at,
+        `select a.id, a.plano_nome, a.valor, a.status, a.vencimento_dia, a.forma_pagamento, a.created_at, a.bloqueada,
                 exists(select 1 from financeiro.contratos k where k.assinatura_id = a.id) as tem_contrato
            from financeiro.assinaturas a where a.cliente_id = $1 and a.status <> 'CANCELADA' order by a.created_at desc`,
         [c.id],

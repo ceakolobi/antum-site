@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { CheckCircle2, Loader2 } from 'lucide-react';
 import { Link } from '../router/Link';
+import { conteudoPlanos } from '../data/planosConteudo';
 
 interface Produto {
   slug: string;
@@ -55,7 +56,7 @@ export const PlanosPage: React.FC = () => {
                 <p className="mt-1 text-2xl font-extrabold text-cyan-300">
                   {brl(p.valor)}<span className="text-sm font-medium text-slate-400">/mês</span>
                 </p>
-                {p.descricao && <p className="text-sm text-slate-400 mt-3">{p.descricao}</p>}
+                <p className="text-sm text-slate-400 mt-3">{conteudoPlanos[p.slug]?.resumo || p.descricao}</p>
                 <ul className="mt-4 space-y-1.5 text-sm text-slate-300 flex-1">
                   {p.recursos.map((r) => (
                     <li key={r} className="flex gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" />{r}</li>
@@ -66,11 +67,17 @@ export const PlanosPage: React.FC = () => {
                   {p.taxaImplantacao > 0 && <p>Implantação: {brl(p.taxaImplantacao)} (cobrança única).</p>}
                   {p.requerAprovacao && <p>Contratação sujeita a aprovação da Antum.</p>}
                 </div>
-                <a
-                  href={`/cadastro?plano=${encodeURIComponent(p.slug)}`}
+                <Link
+                  to={`/planos/${p.slug}`}
                   className="mt-5 w-full text-center px-5 py-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-sm"
                 >
-                  {p.requerAprovacao ? 'Solicitar' : 'Contratar'}
+                  Conheça o plano
+                </Link>
+                <a
+                  href={`/cadastro?plano=${encodeURIComponent(p.slug)}`}
+                  className="mt-2 w-full text-center px-5 py-2.5 rounded-xl border border-slate-700 hover:border-cyan-400 text-slate-200 text-sm font-semibold"
+                >
+                  {p.requerAprovacao ? 'Solicitar' : 'Contratar direto'}
                 </a>
               </div>
             ))}

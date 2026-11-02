@@ -94,6 +94,14 @@ export const HowItWorksPage: React.FC = () => {
           <Link to="/planos" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-sm font-bold uppercase tracking-wider">
             Ver planos e produtos <ArrowRight className="w-4 h-4" />
           </Link>
+          <p className="mt-5 text-sm text-slate-400">
+            Conheça em detalhe:{' '}
+            <Link to="/planos/marina-sdr" className="text-cyan-400 underline">Marina SDR</Link>
+            {' · '}
+            <Link to="/planos/site-profissional" className="text-cyan-400 underline">Site Profissional</Link>
+            {' · '}
+            <Link to="/planos/site-vera" className="text-cyan-400 underline">Site + Vera</Link>
+          </p>
         </section>
 
         {/* FAQ */}

@@ -20,6 +20,7 @@ import { TermosPage } from './pages/TermosPage';
 import { PrivacidadePage } from './pages/PrivacidadePage';
 import { CadastroPage } from './pages/CadastroPage';
 import { PlanosPage } from './pages/PlanosPage';
+import { PlanoDetalhePage } from './pages/PlanoDetalhePage';
 import { AreaClientePage } from './pages/AreaClientePage';
 import { AdminPage } from './pages/AdminPage';
 import { Link } from './router/Link';
@@ -147,6 +148,10 @@ const RouteDispatcher: React.FC = () => {
   // 10.0 Planos / Produtos (catálogo público, preços vêm do banco)
   if (currentPath === '/planos') {
     return <PlanosPage />;
+  }
+
+  if (currentPath.startsWith('/planos/')) {
+    return <PlanoDetalhePage />;
   }
 
   // 10.1 Área do cliente (porta de entrada: cadastro e, em breve, Minha Conta)

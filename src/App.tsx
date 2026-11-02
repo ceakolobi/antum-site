@@ -68,7 +68,7 @@ const RouteDispatcher: React.FC = () => {
       document.title = 'Política de Privacidade | ANTUM';
     } else if (currentPath === '/planos') {
       document.title = 'Planos / Produtos | ANTUM';
-    } else if (currentPath === '/area-do-cliente') {
+    } else if (currentPath === '/area-do-cliente' || currentPath.startsWith('/area-do-cliente/')) {
       document.title = 'Área do cliente | ANTUM';
     }
   }, [currentPath]);
@@ -155,7 +155,7 @@ const RouteDispatcher: React.FC = () => {
   }
 
   // 10.1 Área do cliente (porta de entrada: cadastro e, em breve, Minha Conta)
-  if (currentPath === '/area-do-cliente') {
+  if (currentPath === '/area-do-cliente' || currentPath.startsWith('/area-do-cliente/')) {
     return <AreaClientePage />;
   }
 

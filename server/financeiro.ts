@@ -6,7 +6,8 @@ import pg from 'pg';
 import fs from 'fs';
 import path from 'path';
 import { registrarAdminAuth } from './adminAuth';
-import { renderContrato, gerarPdf, enviarEmailContrato, enviarAvisoCobranca, type TipoAviso } from './contrato';
+import { registrarAreaCliente } from './clienteAuth';
+import { renderContrato, gerarPdf, enviarEmailContrato, enviarAvisoCobranca, enviarEmailAcesso, type TipoAviso } from './contrato';
 
 const env = (k: string) => (process.env[k] || '').trim();
 
@@ -408,6 +409,7 @@ async function processarCadastro(req: Request, plano: PlanoResolvido, d: ReturnT
 
   // Contrato aceito: texto congelado + PDF + e-mail (não bloqueia o cadastro se falhar)
   await registrarContrato(req, ass, cliente);
+  await convidarAcesso(cliente);
 
   // Plano que precisa de aprovação: fica registrado e NADA é criado no Asaas até o admin aprovar
   if (ass.status === 'AGUARDANDO_APROVACAO') {
@@ -537,6 +539,60 @@ async function avisarCobranca(tipo: TipoAviso, clienteId: string, p: any, plano:
   }
 }
 
+// ---------- área do cliente: link de acesso por e-mail e sincronização de cobranças ----
+let emitirLinkAcesso: ((email: string, tipo: 'definir' | 'reset') => Promise<{ id: string; nome: string; email: string; token: string } | null>) | null = null;
+
+async function enviarLinkAcesso(cl: { id: string; nome: string; email: string }, tipo: 'definir' | 'reset', token: string) {
+  const chave = env('RESEND_API_KEY');
+  const [reg] = await db(
+    'insert into financeiro.emails (cliente_id, tipo, destinatario) values ($1,$2,$3) returning id',
+    [cl.id, `acesso_${tipo}`, cl.email],
+  );
+  if (!chave) {
+    await db("update financeiro.emails set status = 'FALHA', erro = 'sem_chave_resend' where id = $1", [reg.id]);
+    return;
+  }
+  try {
+    const [cfg] = await db("select valor from financeiro.config where chave = 'empresa_email'");
+    await enviarEmailAcesso({
+      chave, base: env('RESEND_BASE_URL') || undefined, de: env('EMAIL_FROM') || 'Antum <contratos@antum.com.br>',
+      para: cl.email, responderPara: (cfg?.valor || '').trim() || undefined, tipo, nome: cl.nome,
+      url: `${SITE_URL()}/area-do-cliente/senha?token=${token}`,
+    });
+    await db("update financeiro.emails set status = 'ENVIADO', enviado_em = now(), tentativas = 1 where id = $1", [reg.id]);
+  } catch (e) {
+    await db("update financeiro.emails set status = 'FALHA', tentativas = 1, erro = $2 where id = $1", [reg.id, String((e as Error).message).slice(0, 300)]);
+  }
+}
+
+// Convite de primeiro acesso logo após a contratação (só uma vez por cliente, e só se ainda não tem senha)
+async function convidarAcesso(cliente: { id: string; nome: string; email: string }) {
+  try {
+    if (!emitirLinkAcesso) return;
+    const a = (await db('select senha_hash from financeiro.cliente_acessos where cliente_id = $1', [cliente.id]))[0];
+    if (a) return; // já convidado antes ou já tem senha: ele usa "Esqueci minha senha" se precisar
+    const l = await emitirLinkAcesso(String(cliente.email).toLowerCase(), 'definir');
+    if (l) await enviarLinkAcesso({ id: l.id, nome: l.nome, email: l.email }, 'definir', l.token);
+  } catch (e) {
+    console.error('[fin/convite-acesso]', String((e as Error).message).slice(0, 200));
+  }
+}
+
+// Traz do Asaas as cobranças do cliente (cobre o que o webhook ainda não entregou). No máximo 1x por minuto por cliente.
+const ultimaSync = new Map<string, number>();
+async function sincronizarCobrancas(clienteId: string) {
+  const agora = Date.now();
+  if ((ultimaSync.get(clienteId) ?? 0) > agora - 60_000) return;
+  ultimaSync.set(clienteId, agora);
+  const c = (await db('select asaas_customer_id from financeiro.clientes where id = $1', [clienteId]))[0];
+  if (!c?.asaas_customer_id) return;
+  const r = await asaas<any>('GET', `/payments?customer=${encodeURIComponent(c.asaas_customer_id)}&limit=50`);
+  for (const p of r?.data || []) {
+    if (p.deleted) continue;
+    await aplicarEventoPagamento({ event: 'PAYMENT_SYNC', dateCreated: new Date().toISOString(), payment: p });
+  }
+}
+
 // ---------- webhook -----------------------------------------------------------
 const PAGOS = new Set(['RECEIVED', 'CONFIRMED', 'RECEIVED_IN_CASH']);
 
@@ -604,6 +660,11 @@ export function registrarFinanceiro(app: Express) {
 
   // Login do administrador (e-mail + senha, sessão em cookie, auditoria)
   const { exigeAdmin, auditar } = registrarAdminAuth(app, { db, str, sha256, limite, ipDe, origemOk, naoConfigurado });
+  emitirLinkAcesso = registrarAreaCliente(
+    app,
+    { db, str, sha256, limite, ipDe, origemOk, naoConfigurado },
+    { sincronizar: sincronizarCobrancas, enviarLink: enviarLinkAcesso },
+  ).emitirLink;
   const quem = (res: Response) => String(res.locals.admin?.email || '');
 
   // Catálogo público: só produtos ativos, direto do banco (nenhum preço fixo no código)

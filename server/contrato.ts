@@ -114,3 +114,22 @@ export async function enviarAvisoCobranca(opts: {
   });
   if (!r.ok) throw new Error(`resend ${r.status}: ${(await r.text()).slice(0, 200)}`);
 }
+
+// E-mail com o link para o cliente definir (primeiro acesso) ou redefinir a senha da área do cliente
+export async function enviarEmailAcesso(opts: {
+  chave: string; base?: string; de: string; para: string; responderPara?: string;
+  tipo: 'definir' | 'reset'; nome: string; url: string;
+}): Promise<void> {
+  const primeiro = opts.tipo === 'definir';
+  const assunto = primeiro ? 'Acesse a sua área do cliente Antum' : 'Redefinir a senha — área do cliente Antum';
+  const corpo = primeiro
+    ? `<p>Sua contratação foi registrada. Na <strong>área do cliente</strong> você vê as cobranças, baixa a 2ª via do boleto e acessa o seu contrato.</p><p>Para entrar pela primeira vez, defina a sua senha (o link vale por 7 dias):</p>`
+    : `<p>Recebemos um pedido para redefinir a senha da sua área do cliente. O link vale por <strong>1 hora</strong> e só pode ser usado uma vez:</p>`;
+  const html = `<div style="font-family:Arial,sans-serif;font-size:15px;color:#222;line-height:1.5"><p>Olá, ${esc(opts.nome)}!</p>${corpo}<p><a href="${esc(opts.url)}" style="display:inline-block;background:#0891b2;color:#fff;text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:bold">${primeiro ? 'Definir minha senha' : 'Redefinir minha senha'}</a></p>${primeiro ? '' : '<p>Se não foi você, ignore este e-mail: a sua senha continua a mesma.</p>'}<p>Equipe Antum</p></div>`;
+  const r = await fetch(`${opts.base || 'https://api.resend.com'}/emails`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${opts.chave}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from: opts.de, to: [opts.para], subject: assunto, html, reply_to: opts.responderPara || undefined }),
+  });
+  if (!r.ok) throw new Error(`resend ${r.status}: ${(await r.text()).slice(0, 200)}`);
+}

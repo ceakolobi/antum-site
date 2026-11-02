@@ -30,7 +30,7 @@ export async function hashSenha(senha: string): Promise<string> {
   return `scrypt$${SCRYPT.N}$${SCRYPT.r}$${SCRYPT.p}$${salt.toString('hex')}$${k.toString('hex')}`;
 }
 
-async function conferirSenha(senha: string, guardado: string): Promise<boolean> {
+export async function conferirSenha(senha: string, guardado: string): Promise<boolean> {
   const p = guardado.split('$');
   if (p.length !== 6 || p[0] !== 'scrypt') return false;
   const salt = Buffer.from(p[4], 'hex');
@@ -40,9 +40,9 @@ async function conferirSenha(senha: string, guardado: string): Promise<boolean> 
 }
 
 // Hash falso para gastar o mesmo tempo quando o e-mail não existe (evita descobrir e-mails pelo tempo)
-const HASH_FALSO = `scrypt$${SCRYPT.N}$${SCRYPT.r}$${SCRYPT.p}$${'00'.repeat(16)}$${'00'.repeat(64)}`;
+export const HASH_FALSO = `scrypt$${SCRYPT.N}$${SCRYPT.r}$${SCRYPT.p}$${'00'.repeat(16)}$${'00'.repeat(64)}`;
 
-function lerCookie(req: Request, nome: string): string {
+export function lerCookie(req: Request, nome: string): string {
   const h = req.headers.cookie || '';
   for (const parte of h.split(';')) {
     const i = parte.indexOf('=');
@@ -51,7 +51,7 @@ function lerCookie(req: Request, nome: string): string {
   return '';
 }
 
-const cookieSeguro = () => process.env.NODE_ENV === 'production' && process.env.FIN_COOKIE_INSECURE !== '1';
+export const cookieSeguro = () => process.env.NODE_ENV === 'production' && process.env.FIN_COOKIE_INSECURE !== '1';
 
 function escreverCookie(res: Response, valor: string, maxAgeS: number) {
   res.setHeader(

@@ -11,7 +11,7 @@ export const Footer: React.FC = () => {
   const { openMarinaModal } = useRouter();
 
   return (
-    <footer id="main-footer" className="bg-[#070a10] border-t border-slate-800/80 pt-16 pb-12 text-slate-400">
+    <footer id="main-footer" className="bg-[#070a10] border-t border-slate-800/80 pt-16 pb-28 text-slate-400">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-12 pb-12 border-b border-slate-800/60">
           

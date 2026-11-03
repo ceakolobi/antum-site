@@ -153,7 +153,7 @@ export const Footer: React.FC = () => {
         {/* BOTTOM ROW */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
           <div className="flex items-center gap-2">
-            <span>© {new Date().getFullYear()} ANTUM | AI & Automação & Tecnologia - Todos os direitos reservados.&nbsp; 08.754.551/0001-52</span>
+            <span>© {new Date().getFullYear()} ANTUM | Automação e Tecnologia Studio. Todos os direitos reservados · 08.754.551/0001-52</span>
           </div>
 
           <div className="flex items-center gap-6 font-mono text-[11px]">
